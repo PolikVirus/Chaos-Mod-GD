@@ -1,0 +1,51 @@
+{
+  "geode": "4.10.0",
+  "gd": {
+    "win": "2.2074",
+    "android": "2.2074",
+    "mac": "2.2074",
+    "ios": "2.2074"
+  },
+  "id": "polik.chaos-mod",
+  "name": "Chaos Mod",
+  "version": "v1.0.0",
+  "developer": "Polik",
+  "description": "",
+  "resources": {
+    "files": [
+      "resources/Soggy.jpg"
+    ]
+  },
+  "settings": {
+    "debug-title": {
+      "type": "title",
+      "name": "Debug"
+    },
+    "force-event": {
+      "type": "bool",
+      "name": "Force event",
+      "description": "If enabled, Chaos Mod will always run the selected event instead of random.",
+      "default": false
+    },
+    "forced-event-id": {
+      "type": "string",
+      "name": "Forced event",
+      "description": "Which event to run when Force event is enabled.",
+      "default": "random",
+      "one-of": [
+        "random",
+        "speed-x0-5",
+        "speed-x1-5",
+        "speed-x2",
+        "gravity-low",
+        "gravity-high",
+        "reverse-controls",
+        "size-mini",
+        "size-normal",
+        "jump-delay",
+        "soggy-jumpscare"
+      ],
+      "enable-if": "force-event"
+    }
+  }
+}
