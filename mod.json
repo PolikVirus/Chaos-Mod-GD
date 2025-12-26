@@ -43,7 +43,8 @@
         "size-mini",
         "size-normal",
         "jump-delay",
-        "soggy-jumpscare"
+        "soggy-jumpscare",
+        "invert-colors"
       ],
       "enable-if": "force-event"
     }
