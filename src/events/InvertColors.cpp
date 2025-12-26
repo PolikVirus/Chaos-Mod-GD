@@ -11,31 +11,14 @@ namespace chaosmod {
 
 static constexpr float kDurationSeconds = 20.f;
 
-// Controller is on the running scene (so it ticks + timers work).
 static constexpr int kInvertControllerTag = 0x494E5654; // 'INVT'
-
-// Overlay is on director notification node (so it survives pause/unpause).
 static constexpr int kInvertOverlayTag    = 0x494E564F; // 'INVO'
 
-static cocos2d::CCNode* getOrMakeNotificationNode() {
-    auto director = cocos2d::CCDirector::sharedDirector();
-    if (!director) return nullptr;
-
-    auto notif = director->getNotificationNode();
-    if (!notif) {
-        notif = cocos2d::CCNode::create();
-        if (!notif) return nullptr;
-        director->setNotificationNode(notif);
-    }
-    return notif;
-}
-
+// Helper: is `node` a descendant of `root`?
 static bool isDescendantOf(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
-    cocos2d::CCNode* cur = node;
-    while (cur) {
+    for (auto cur = node; cur; cur = cur->getParent()) {
         if (cur == root) return true;
-        cur = cur->getParent();
     }
     return false;
 }
@@ -44,9 +27,8 @@ class InvertColorsController : public cocos2d::CCNode {
 public:
     PlayLayer* m_pl = nullptr;
 
-    // We retain the overlay so even if some layer temporarily removes it, we can re-add it.
-    cocos2d::CCLayerColor* m_overlay = nullptr;
-
+    cocos2d::CCLayerColor* m_overlay = nullptr; // retained
+    float m_remaining = 0.f;
     bool m_restored = false;
 
     static InvertColorsController* create(PlayLayer* pl) {
@@ -56,15 +38,19 @@ public:
         return ret;
     }
 
+    cocos2d::CCScene* getScene() {
+        return cocos2d::CCDirector::sharedDirector()->getRunningScene();
+    }
+
     void ensureOverlay() {
         if (m_restored) return;
 
-        auto notif = getOrMakeNotificationNode();
-        if (!notif) return;
+        auto scene = getScene();
+        if (!scene) return;
 
-        // Try recover if overlay already exists (e.g., refreshed event)
+        // Recover existing overlay if present (e.g. refreshed event)
         if (!m_overlay) {
-            if (auto existing = notif->getChildByTag(kInvertOverlayTag)) {
+            if (auto existing = scene->getChildByTag(kInvertOverlayTag)) {
                 if (auto layer = typeinfo_cast<cocos2d::CCLayerColor*>(existing)) {
                     m_overlay = layer;
                     m_overlay->retain();
@@ -72,7 +58,7 @@ public:
             }
         }
 
-        // Create if needed
+        // Create overlay if needed
         if (!m_overlay) {
             m_overlay = cocos2d::CCLayerColor::create(cocos2d::ccc4(255, 255, 255, 255));
             if (!m_overlay) return;
@@ -82,55 +68,73 @@ public:
             m_overlay->setAnchorPoint({0.f, 0.f});
             m_overlay->setPosition({0.f, 0.f});
 
-            // True invert: output = 1 - dstColor (white src with ONE_MINUS_DST_COLOR blend)
+            // True invert: output = 1 - dstColor (white src)
             m_overlay->setBlendFunc(ccBlendFunc{GL_ONE_MINUS_DST_COLOR, GL_ZERO});
+
+            scene->addChild(m_overlay, std::numeric_limits<int>::max());
         }
 
-        // Make sure it's attached to the *current* notification node and drawn last
-        if (m_overlay->getParent() != notif) {
+        // Fullscreen size
+        auto ws = cocos2d::CCDirector::sharedDirector()->getWinSize();
+        m_overlay->setContentSize(ws);
+
+        // Re-attach if something moved/removed it during pause/unpause
+        if (m_overlay->getParent() != scene) {
             if (m_overlay->getParent()) {
                 m_overlay->removeFromParentAndCleanup(false);
             }
-            notif->addChild(m_overlay, std::numeric_limits<int>::max());
-        } else {
-            m_overlay->setZOrder(std::numeric_limits<int>::max());
+            scene->addChild(m_overlay, std::numeric_limits<int>::max());
         }
 
-        // Fullscreen
-        auto ws = cocos2d::CCDirector::sharedDirector()->getWinSize();
-        m_overlay->setContentSize(ws);
+        // Make sure it draws AFTER everything else (pause layer often adds itself late).
+        // If it isn't the last child, remove+readd to become last.
+        m_overlay->setZOrder(std::numeric_limits<int>::max());
+        auto children = scene->getChildren();
+        if (children && children->count() > 0) {
+            auto last = children->lastObject();
+            if (last != m_overlay) {
+                m_overlay->removeFromParentAndCleanup(false);
+                scene->addChild(m_overlay, std::numeric_limits<int>::max());
+            }
+        }
     }
 
     void start(float durationSeconds) {
         if (m_restored) return;
 
+        m_remaining = durationSeconds;
+
         ensureOverlay();
         this->scheduleUpdate();
-
-        // Reliable timer (works because controller is on the running scene)
-        this->stopAllActions();
-        this->runAction(cocos2d::CCSequence::create(
-            cocos2d::CCDelayTime::create(durationSeconds),
-            cocos2d::CCCallFunc::create(this, callfunc_selector(InvertColorsController::restoreAndRemove)),
-            nullptr
-        ));
     }
 
-    void update(float) override {
+    void update(float dt) override {
         if (m_restored) {
             this->unscheduleUpdate();
             return;
         }
 
-        // If we left the level, clean up so it doesn't leak into menus.
-        auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
-        if (!scene || !isDescendantOf(scene, m_pl)) {
+        auto scene = getScene();
+        if (!scene) {
             restoreAndRemove();
             return;
         }
 
-        // Pause/unpause can mess with nodes; keep it enforced.
+        // If we actually left the level, clean up so it doesn't leak into menus.
+        // (During pause, PlayLayer is still in the scene, so we keep running.)
+        if (m_pl && !isDescendantOf(scene, m_pl)) {
+            restoreAndRemove();
+            return;
+        }
+
+        // Keep overlay enforced through pause/unpause.
         ensureOverlay();
+
+        // Tick down while we're alive. If dt is 0 while paused, it simply won't tick (fine).
+        m_remaining -= dt;
+        if (m_remaining <= 0.f) {
+            restoreAndRemove();
+        }
     }
 
     void restore() {
@@ -138,7 +142,6 @@ public:
         m_restored = true;
 
         this->unscheduleUpdate();
-        this->stopAllActions();
 
         if (m_overlay) {
             if (m_overlay->getParent()) {
@@ -167,7 +170,7 @@ static void applyInvertColors(PlayLayer* pl, float durationSeconds) {
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
 
-    // Controller lives on the scene so it always ticks + timer always ends.
+    // Controller lives on the scene so it keeps running even if PlayLayer is paused.
     if (auto existing = scene->getChildByTag(kInvertControllerTag)) {
         if (auto ctrl = typeinfo_cast<InvertColorsController*>(existing)) {
             ctrl->m_pl = pl;
