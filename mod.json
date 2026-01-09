@@ -44,7 +44,9 @@
         "size-normal",
         "jump-delay",
         "soggy-jumpscare",
-        "invert-colors"
+        "invert-colors",
+        "shake-screen",
+        "drunk-mode"
       ],
       "enable-if": "force-event"
     }
