@@ -1,40 +1,39 @@
 #include "Event.hpp"
-
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kDurationSeconds = 10.f;
+static constexpr float kEventDuration = 10.f;
 static constexpr int kSpeedControllerTag = 0x53504544; // 'SPED'
 
-class SpeedEventController : public cocos2d::CCNode {
+class SpeedController : public cocos2d::CCNode {
 public:
-    float m_baseScale = 1.f;
+    float m_baseTimeScale = 1.f;
     bool m_restored = false;
 
-    static SpeedEventController* create(float baseScale) {
-        auto ret = new SpeedEventController();
-        if (ret) {
-            ret->m_baseScale = baseScale;
-            ret->autorelease();
-            return ret;
+    static SpeedController* create(float baseScale) {
+        auto ctrl = new SpeedController();
+        if (ctrl) {
+            ctrl->m_baseTimeScale = baseScale;
+            ctrl->autorelease();
+            return ctrl;
         }
         return nullptr;
     }
 
-    void applyFactor(float factor) {
-        auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler();
-        if (!sched) return;
-        sched->setTimeScale(m_baseScale * factor);
+    void setFactor(float factor) {
+        if (auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler()) {
+            sched->setTimeScale(m_baseTimeScale * factor);
+        }
     }
 
-    void startTimer(float durationSeconds) {
+    void scheduleEnd(float duration) {
         this->stopAllActions();
         this->runAction(cocos2d::CCSequence::create(
-            cocos2d::CCDelayTime::create(durationSeconds),
-            cocos2d::CCCallFunc::create(this, callfunc_selector(SpeedEventController::restoreAndRemove)),
+            cocos2d::CCDelayTime::create(duration),
+            cocos2d::CCCallFunc::create(this, callfunc_selector(SpeedController::restoreAndDelete)),
             nullptr
         ));
     }
@@ -42,61 +41,52 @@ public:
     void restore() {
         if (m_restored) return;
         m_restored = true;
-
-        auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler();
-        if (!sched) return;
-        sched->setTimeScale(m_baseScale);
+        if (auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler()) {
+            sched->setTimeScale(m_baseTimeScale);
+        }
     }
 
-    void restoreAndRemove() {
-        this->restore();
+    void restoreAndDelete() {
+        restore();
         this->removeFromParentAndCleanup(true);
     }
 
     void onExit() override {
-        // Fail-safe: restore if the PlayLayer exits before our timer ends.
-        this->restore();
+        restore();
         cocos2d::CCNode::onExit();
     }
 };
 
-static void applySpeedFactor(PlayLayer* pl, float factor, float durationSeconds) {
+static void changePlaySpeed(PlayLayer* pl, float factor, float duration) {
     if (!pl) return;
-
     auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler();
     if (!sched) return;
 
-    // If already active, reuse the controller: switch factor + refresh timer.
     if (auto existing = pl->getChildByTag(kSpeedControllerTag)) {
-        if (auto ctrl = dynamic_cast<SpeedEventController*>(existing)) {
-            ctrl->applyFactor(factor);
-            ctrl->startTimer(durationSeconds);
+        if (auto ctrl = dynamic_cast<SpeedController*>(existing)) {
+            ctrl->setFactor(factor);
+            ctrl->scheduleEnd(duration);
             return;
         }
-        // Tag collision (unlikely) — remove and recreate cleanly.
         existing->removeFromParentAndCleanup(true);
     }
 
     float base = sched->getTimeScale();
-    auto ctrl = SpeedEventController::create(base);
+    auto ctrl = SpeedController::create(base);
     if (!ctrl) return;
-
     ctrl->setTag(kSpeedControllerTag);
     pl->addChild(ctrl, 999999);
-
-    ctrl->applyFactor(factor);
-    ctrl->startTimer(durationSeconds);
+    ctrl->setFactor(factor);
+    ctrl->scheduleEnd(duration);
 }
-
-// ---- Event registrations ----
 
 void registerSpeedX2(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x2",
         "Speed x2",
-        kDurationSeconds,
+        kEventDuration,
         [](PlayLayer* pl) {
-            applySpeedFactor(pl, 2.f, kDurationSeconds);
+            changePlaySpeed(pl, 2.f, kEventDuration);
         }
     ));
 }
@@ -105,9 +95,9 @@ void registerSpeedX1_5(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x1-5",
         "Speed x1.5",
-        kDurationSeconds,
+        kEventDuration,
         [](PlayLayer* pl) {
-            applySpeedFactor(pl, 1.5f, kDurationSeconds);
+            changePlaySpeed(pl, 1.5f, kEventDuration);
         }
     ));
 }
@@ -116,9 +106,9 @@ void registerSpeedX0_5(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x0-5",
         "Speed x0.5",
-        kDurationSeconds,
+        kEventDuration,
         [](PlayLayer* pl) {
-            applySpeedFactor(pl, 0.5f, kDurationSeconds);
+            changePlaySpeed(pl, 0.5f, kEventDuration);
         }
     ));
 }
