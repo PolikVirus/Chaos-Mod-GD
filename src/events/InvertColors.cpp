@@ -9,13 +9,11 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kDurationSeconds = 20.f;
-
+static constexpr float kEventDuration = 20.f;
 static constexpr int kInvertControllerTag = 0x494E5654; // 'INVT'
-static constexpr int kInvertOverlayTag    = 0x494E564F; // 'INVO'
+static constexpr int kOverlayTag = 0x494E564F; // 'INVO'
 
-// Helper: is `node` a descendant of `root`?
-static bool isDescendantOf(cocos2d::CCNode* root, cocos2d::CCNode* node) {
+static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
     for (auto cur = node; cur; cur = cur->getParent()) {
         if (cur == root) return true;
@@ -25,176 +23,140 @@ static bool isDescendantOf(cocos2d::CCNode* root, cocos2d::CCNode* node) {
 
 class InvertColorsController : public cocos2d::CCNode {
 public:
-    PlayLayer* m_pl = nullptr;
-
-    cocos2d::CCLayerColor* m_overlay = nullptr; // retained
-    float m_remaining = 0.f;
-    bool m_restored = false;
+    PlayLayer* m_playLayer = nullptr;
+    cocos2d::CCLayerColor* m_overlayLayer = nullptr;
+    float m_timeRemaining = 0.f;
+    bool m_isRestored = false;
 
     static InvertColorsController* create(PlayLayer* pl) {
-        auto ret = new InvertColorsController();
-        ret->m_pl = pl;
-        ret->autorelease();
-        return ret;
+        auto ctrl = new InvertColorsController();
+        ctrl->m_playLayer = pl;
+        ctrl->autorelease();
+        return ctrl;
     }
 
-    cocos2d::CCScene* getScene() {
+    cocos2d::CCScene* scene() {
         return cocos2d::CCDirector::sharedDirector()->getRunningScene();
     }
 
     void ensureOverlay() {
-        if (m_restored) return;
-
-        auto scene = getScene();
-        if (!scene) return;
-
-        // Recover existing overlay if present (e.g. refreshed event)
-        if (!m_overlay) {
-            if (auto existing = scene->getChildByTag(kInvertOverlayTag)) {
+        if (m_isRestored) return;
+        auto sc = scene();
+        if (!sc) return;
+        if (!m_overlayLayer) {
+            if (auto existing = sc->getChildByTag(kOverlayTag)) {
                 if (auto layer = typeinfo_cast<cocos2d::CCLayerColor*>(existing)) {
-                    m_overlay = layer;
-                    m_overlay->retain();
+                    m_overlayLayer = layer;
+                    m_overlayLayer->retain();
                 }
             }
         }
-
-        // Create overlay if needed
-        if (!m_overlay) {
-            m_overlay = cocos2d::CCLayerColor::create(cocos2d::ccc4(255, 255, 255, 255));
-            if (!m_overlay) return;
-
-            m_overlay->retain();
-            m_overlay->setTag(kInvertOverlayTag);
-            m_overlay->setAnchorPoint({0.f, 0.f});
-            m_overlay->setPosition({0.f, 0.f});
-
-            // True invert: output = 1 - dstColor (white src)
-            m_overlay->setBlendFunc(ccBlendFunc{GL_ONE_MINUS_DST_COLOR, GL_ZERO});
-
-            scene->addChild(m_overlay, std::numeric_limits<int>::max());
+        if (!m_overlayLayer) {
+            m_overlayLayer = cocos2d::CCLayerColor::create(cocos2d::ccc4(255,255,255,255));
+            if (!m_overlayLayer) return;
+            m_overlayLayer->retain();
+            m_overlayLayer->setTag(kOverlayTag);
+            m_overlayLayer->setAnchorPoint({0.f,0.f});
+            m_overlayLayer->setPosition({0.f,0.f});
+            m_overlayLayer->setBlendFunc(ccBlendFunc{GL_ONE_MINUS_DST_COLOR, GL_ZERO});
+            sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
         }
-
-        // Fullscreen size
         auto ws = cocos2d::CCDirector::sharedDirector()->getWinSize();
-        m_overlay->setContentSize(ws);
-
-        // Re-attach if something moved/removed it during pause/unpause
-        if (m_overlay->getParent() != scene) {
-            if (m_overlay->getParent()) {
-                m_overlay->removeFromParentAndCleanup(false);
+        m_overlayLayer->setContentSize(ws);
+        if (m_overlayLayer->getParent() != sc) {
+            if (m_overlayLayer->getParent()) {
+                m_overlayLayer->removeFromParentAndCleanup(false);
             }
-            scene->addChild(m_overlay, std::numeric_limits<int>::max());
+            sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
         }
-
-        // Make sure it draws AFTER everything else (pause layer often adds itself late).
-        // If it isn't the last child, remove+readd to become last.
-        m_overlay->setZOrder(std::numeric_limits<int>::max());
-        auto children = scene->getChildren();
+        m_overlayLayer->setZOrder(std::numeric_limits<int>::max());
+        auto children = sc->getChildren();
         if (children && children->count() > 0) {
-            auto last = children->lastObject();
-            if (last != m_overlay) {
-                m_overlay->removeFromParentAndCleanup(false);
-                scene->addChild(m_overlay, std::numeric_limits<int>::max());
+            if (children->lastObject() != m_overlayLayer) {
+                m_overlayLayer->removeFromParentAndCleanup(false);
+                sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
             }
         }
     }
 
-    void start(float durationSeconds) {
-        if (m_restored) return;
-
-        m_remaining = durationSeconds;
-
+    void start(float duration) {
+        if (m_isRestored) return;
+        m_timeRemaining = duration;
         ensureOverlay();
-        this->scheduleUpdate();
+        scheduleUpdate();
     }
 
     void update(float dt) override {
-        if (m_restored) {
-            this->unscheduleUpdate();
+        if (m_isRestored) {
+            unscheduleUpdate();
             return;
         }
-
-        auto scene = getScene();
-        if (!scene) {
-            restoreAndRemove();
+        auto sc = scene();
+        if (!sc) {
+            restoreAndDelete();
             return;
         }
-
-        // If we actually left the level, clean up so it doesn't leak into menus.
-        // (During pause, PlayLayer is still in the scene, so we keep running.)
-        if (m_pl && !isDescendantOf(scene, m_pl)) {
-            restoreAndRemove();
+        if (m_playLayer && !isDescendant(sc, m_playLayer)) {
+            restoreAndDelete();
             return;
         }
-
-        // Keep overlay enforced through pause/unpause.
         ensureOverlay();
-
-        // Tick down while we're alive. If dt is 0 while paused, it simply won't tick (fine).
-        m_remaining -= dt;
-        if (m_remaining <= 0.f) {
-            restoreAndRemove();
+        m_timeRemaining -= dt;
+        if (m_timeRemaining <= 0.f) {
+            restoreAndDelete();
         }
     }
 
     void restore() {
-        if (m_restored) return;
-        m_restored = true;
-
-        this->unscheduleUpdate();
-
-        if (m_overlay) {
-            if (m_overlay->getParent()) {
-                m_overlay->removeFromParentAndCleanup(true);
+        if (m_isRestored) return;
+        m_isRestored = true;
+        unscheduleUpdate();
+        if (m_overlayLayer) {
+            if (m_overlayLayer->getParent()) {
+                m_overlayLayer->removeFromParentAndCleanup(true);
             }
-            m_overlay->release();
-            m_overlay = nullptr;
+            m_overlayLayer->release();
+            m_overlayLayer = nullptr;
         }
     }
 
-    void restoreAndRemove() {
+    void restoreAndDelete() {
         restore();
-        this->removeFromParentAndCleanup(true);
+        removeFromParentAndCleanup(true);
     }
 
     void onExit() override {
-        // Fail-safe.
         restore();
         cocos2d::CCNode::onExit();
     }
 };
 
-static void applyInvertColors(PlayLayer* pl, float durationSeconds) {
+static void applyInvert(PlayLayer* pl, float duration) {
     if (!pl) return;
-
-    auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
-    if (!scene) return;
-
-    // Controller lives on the scene so it keeps running even if PlayLayer is paused.
-    if (auto existing = scene->getChildByTag(kInvertControllerTag)) {
+    auto sc = cocos2d::CCDirector::sharedDirector()->getRunningScene();
+    if (!sc) return;
+    if (auto existing = sc->getChildByTag(kInvertControllerTag)) {
         if (auto ctrl = typeinfo_cast<InvertColorsController*>(existing)) {
-            ctrl->m_pl = pl;
-            ctrl->start(durationSeconds);
+            ctrl->m_playLayer = pl;
+            ctrl->start(duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-
     auto ctrl = InvertColorsController::create(pl);
     if (!ctrl) return;
-
     ctrl->setTag(kInvertControllerTag);
-    scene->addChild(ctrl, std::numeric_limits<int>::max());
-    ctrl->start(durationSeconds);
+    sc->addChild(ctrl, std::numeric_limits<int>::max());
+    ctrl->start(duration);
 }
 
 void registerInvertColors(EventRegistry& reg) {
     reg.add(EventDef(
         "invert-colors",
         "Invert Colors",
-        kDurationSeconds,
+        kEventDuration,
         [](PlayLayer* pl) {
-            applyInvertColors(pl, kDurationSeconds);
+            applyInvert(pl, kEventDuration);
         }
     ));
 }

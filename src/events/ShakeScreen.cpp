@@ -16,12 +16,10 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kDurationSeconds = 10.f;
+static constexpr float kEventDuration = 10.f;
+static constexpr int kControllerTag = 0x5348414B; // 'SHAK'
 
-// Controller lives on the running scene so it resumes correctly after pause.
-static constexpr int kShakeControllerTag = 0x5348414B; // 'SHAK'
-
-static bool isDescendantOf(cocos2d::CCNode* root, cocos2d::CCNode* node) {
+static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
     for (auto cur = node; cur; cur = cur->getParent()) {
         if (cur == root) return true;
@@ -34,7 +32,6 @@ static bool hasPauseLayerIn(cocos2d::CCNode* n) {
     if (!n) return false;
     auto children = n->getChildren();
     if (!children) return false;
-
     cocos2d::CCObject* obj = nullptr;
     CCARRAY_FOREACH(children, obj) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
@@ -47,152 +44,94 @@ static bool hasPauseLayerIn(cocos2d::CCNode* n) {
 
 static bool isPauseMenuOpen(PlayLayer* pl) {
     if (!pl) return false;
-
 #if CHAOS_HAS_PAUSE_LAYER
-    // PauseLayer is typically added to PlayLayer and/or its UI layer.
     if (pl->m_uiLayer && hasPauseLayerIn(pl->m_uiLayer)) return true;
     if (hasPauseLayerIn(pl)) return true;
-
     if (auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene()) {
         if (hasPauseLayerIn(scene)) return true;
     }
 #endif
-
-    // Fallback: better than nothing (but not reliable on all builds)
     return !pl->isGameplayActive();
 }
 
-class ShakeScreenController : public cocos2d::CCNode {
+class ShakeController : public cocos2d::CCNode {
 public:
-    PlayLayer* m_pl = nullptr;
-
-    // Countdown that should NOT tick while paused.
-    float m_total = kDurationSeconds;
-    float m_remaining = kDurationSeconds;
-
-    float m_strengthPx = 14.f; // intensity
-
-    // Track last applied offset so we can recover the "true" base position without breaking camera movement.
-    cocos2d::CCPoint m_lastOffset = cocos2d::CCPoint(0.f, 0.f);
-
+    PlayLayer* m_playLayer = nullptr;
+    float m_totalTime = kEventDuration;
+    float m_timeLeft = kEventDuration;
+    float m_strength = 14.f;
+    cocos2d::CCPoint m_previousOffset = cocos2d::CCPoint(0.f, 0.f);
     bool m_restored = false;
     bool m_wasPaused = false;
 
-    static ShakeScreenController* create(PlayLayer* pl) {
+    static ShakeController* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto ret = new ShakeScreenController();
-        ret->m_pl = pl;
-        ret->autorelease();
-        return ret;
+        auto c = new ShakeController();
+        c->m_playLayer = pl;
+        c->autorelease();
+        return c;
     }
 
-    cocos2d::CCScene* getScene() {
+    cocos2d::CCScene* scene() {
         return cocos2d::CCDirector::sharedDirector()->getRunningScene();
     }
 
-    cocos2d::CCPoint getBasePos() const {
-        // Current pos includes last offset; subtract it to get the real base.
-        auto cur = m_pl->getPosition();
-        return cocos2d::CCPoint(cur.x - m_lastOffset.x, cur.y - m_lastOffset.y);
+    cocos2d::CCPoint basePosition() const {
+        auto cur = m_playLayer->getPosition();
+        return {cur.x - m_previousOffset.x, cur.y - m_previousOffset.y};
     }
 
-    void setToBasePos() {
-        auto base = getBasePos();
-        m_pl->setPosition(base);
-        m_lastOffset = cocos2d::CCPoint(0.f, 0.f);
+    void resetPosition() {
+        auto base = basePosition();
+        m_playLayer->setPosition(base);
+        m_previousOffset = cocos2d::CCPoint(0.f, 0.f);
     }
 
-    void begin(float durationSeconds) {
-        if (!m_pl) return;
-
-        m_total = durationSeconds;
-        m_remaining = durationSeconds;
-
-        // Start from "base" (no offset)
-        m_lastOffset = cocos2d::CCPoint(0.f, 0.f);
-
-        this->scheduleUpdate();
+    void start(float duration) {
+        if (!m_playLayer) return;
+        m_totalTime = duration;
+        m_timeLeft = duration;
+        m_previousOffset = cocos2d::CCPoint(0.f, 0.f);
+        scheduleUpdate();
     }
 
     void applyShake(float strength) {
-        auto base = getBasePos();
-
+        auto base = basePosition();
         float ox = CCRANDOM_MINUS1_1() * strength;
         float oy = CCRANDOM_MINUS1_1() * strength;
-
-        m_pl->setPosition(cocos2d::CCPoint(base.x + ox, base.y + oy));
-        m_lastOffset = cocos2d::CCPoint(ox, oy);
+        m_playLayer->setPosition({base.x + ox, base.y + oy});
+        m_previousOffset = cocos2d::CCPoint(ox, oy);
     }
 
     void update(float dt) override {
-        if (m_restored) {
-            this->unscheduleUpdate();
-            return;
-        }
-
-        auto scene = getScene();
-        if (!scene || !m_pl) {
-            restoreAndRemove();
-            return;
-        }
-
-        // If we left the level, clean up so it doesn't leak elsewhere.
-        if (!isDescendantOf(scene, m_pl)) {
-            restoreAndRemove();
-            return;
-        }
-
-        bool paused = isPauseMenuOpen(m_pl);
-
-        // While paused: remove any current shake offset and DO NOT consume time.
+        if (m_restored) { unscheduleUpdate(); return; }
+        auto sc = scene();
+        if (!sc || !m_playLayer) { restoreAndDelete(); return; }
+        if (!isDescendant(sc, m_playLayer)) { restoreAndDelete(); return; }
+        bool paused = isPauseMenuOpen(m_playLayer);
         if (paused) {
-            if (!m_wasPaused) {
-                setToBasePos();
-                m_wasPaused = true;
-            }
+            if (!m_wasPaused) { resetPosition(); m_wasPaused = true; }
             return;
         }
-
-        // Just resumed
-        if (m_wasPaused) {
-            // Ensure we're starting from base (no offset) after unpause.
-            setToBasePos();
-            m_wasPaused = false;
-        }
-
-        // Clamp dt so the first frame after unpausing can't skip the whole effect.
-        if (dt < 0.f) dt = 0.f;
-        if (dt > 0.05f) dt = 0.05f;
-
-        // Tick only while not paused
-        m_remaining -= dt;
-        if (m_remaining <= 0.f) {
-            restoreAndRemove();
-            return;
-        }
-
-        // Fade out
-        float t = (m_total > 0.f) ? (m_remaining / m_total) : 0.f;
-        if (t < 0.f) t = 0.f;
-        if (t > 1.f) t = 1.f;
-
-        applyShake(m_strengthPx * t);
+        if (m_wasPaused) { resetPosition(); m_wasPaused = false; }
+        dt = std::clamp(dt, 0.f, 0.05f);
+        m_timeLeft -= dt;
+        if (m_timeLeft <= 0.f) { restoreAndDelete(); return; }
+        float t = (m_totalTime > 0.f) ? (m_timeLeft / m_totalTime) : 0.f;
+        t = std::clamp(t, 0.f, 1.f);
+        applyShake(m_strength * t);
     }
 
     void restore() {
         if (m_restored) return;
         m_restored = true;
-
-        this->unscheduleUpdate();
-
-        if (m_pl) {
-            setToBasePos();
-        }
+        unscheduleUpdate();
+        if (m_playLayer) resetPosition();
     }
 
-    void restoreAndRemove() {
+    void restoreAndDelete() {
         restore();
-        this->removeFromParentAndCleanup(true);
+        removeFromParentAndCleanup(true);
     }
 
     void onExit() override {
@@ -201,37 +140,32 @@ public:
     }
 };
 
-static void applyShake(PlayLayer* pl, float durationSeconds) {
+static void runShakeEffect(PlayLayer* pl, float duration) {
     if (!pl) return;
-
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
-
-    // Reuse controller if already active
-    if (auto existing = scene->getChildByTag(kShakeControllerTag)) {
-        if (auto ctrl = typeinfo_cast<ShakeScreenController*>(existing)) {
-            ctrl->m_pl = pl;
-            ctrl->begin(durationSeconds);
+    if (auto existing = scene->getChildByTag(kControllerTag)) {
+        if (auto ctrl = typeinfo_cast<ShakeController*>(existing)) {
+            ctrl->m_playLayer = pl;
+            ctrl->start(duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-
-    auto ctrl = ShakeScreenController::create(pl);
+    auto ctrl = ShakeController::create(pl);
     if (!ctrl) return;
-
-    ctrl->setTag(kShakeControllerTag);
+    ctrl->setTag(kControllerTag);
     scene->addChild(ctrl, std::numeric_limits<int>::max());
-    ctrl->begin(durationSeconds);
+    ctrl->start(duration);
 }
 
 void registerShakeScreen(EventRegistry& reg) {
     reg.add(EventDef(
         "shake-screen",
         "Shake Screen",
-        kDurationSeconds,
+        kEventDuration,
         [](PlayLayer* pl) {
-            applyShake(pl, kDurationSeconds);
+            runShakeEffect(pl, kEventDuration);
         }
     ));
 }
