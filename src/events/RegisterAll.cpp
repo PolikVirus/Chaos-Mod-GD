@@ -19,9 +19,16 @@ namespace chaosmod {
     void registerInvertColors(EventRegistry&);
     void registerShakeScreen(EventRegistry&);
 
+    void registerHighPitch(EventRegistry&);
+    void registerLowPitch(EventRegistry&);
+
     void registerDrunkMode(EventRegistry&);
 
     void registerSnowEvent(EventRegistry&);
+
+    void registerFlipVertical(EventRegistry&);
+
+    void registerFlipHorizontal(EventRegistry&);
 
     void registerAllEvents(EventRegistry& reg) {
         registerSpeedX2(reg);
@@ -42,8 +49,15 @@ namespace chaosmod {
         registerInvertColors(reg);
         registerShakeScreen(reg);
 
+        registerHighPitch(reg);
+        registerLowPitch(reg);
+
         registerDrunkMode(reg);
 
         registerSnowEvent(reg);
+
+        registerFlipVertical(reg);
+
+        registerFlipHorizontal(reg);
     }
 }

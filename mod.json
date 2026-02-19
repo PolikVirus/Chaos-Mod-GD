@@ -45,8 +45,12 @@
         "soggy-jumpscare",
         "invert-colors",
         "shake-screen",
+        "high-pitch",
+        "low-pitch",
         "drunk-mode",
-        "snow-screen"
+        "snow-screen",
+        "flip-vertical",
+        "flip-horizontal"
       ],
       "enable-if": "force-event"
     }
