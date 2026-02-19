@@ -99,8 +99,12 @@ public:
         }
     }
 
+    static bool isPausedLike(PlayLayer* pl) {
+        return pl && !pl->isGameplayActive();
+    }
+
     void onExit() override {
-        if (gJumpDelay.owner == m_playLayer) {
+        if (gJumpDelay.owner == m_playLayer && !isPausedLike(m_playLayer)) {
             gJumpDelay.active = false;
             gJumpDelay.owner = nullptr;
             gJumpDelay.bypass = false;
