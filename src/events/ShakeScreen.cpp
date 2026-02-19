@@ -32,8 +32,7 @@ static bool hasPauseLayerIn(cocos2d::CCNode* n) {
     if (!n) return false;
     auto children = n->getChildren();
     if (!children) return false;
-    cocos2d::CCObject* obj = nullptr;
-    CCARRAY_FOREACH(children, obj) {
+    for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
             if (typeinfo_cast<PauseLayer*>(child)) return true;
         }
