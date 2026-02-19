@@ -10,7 +10,11 @@
   "name": "Chaos Mod",
   "version": "v1.0.0",
   "developer": "Polik",
-  "description": "",
+  "links": {
+    "source": "https://github.com/PolikVirus/Chaos-Mod-GD"
+  },
+  "tags": ["gameplay", "offline", "joke"],
+  "description": "Random events happen every 30 seconds. Chaos!",
   "resources": {
     "files": [
       "resources/Soggy.jpg"
@@ -53,6 +57,14 @@
         "flip-horizontal"
       ],
       "enable-if": "force-event"
+    },
+    "timer-length": {
+      "type": "int",
+      "name": "Timer Length",
+      "description": "How long between events (in seconds)",
+      "default": 30,
+      "min": 5,
+      "max": 60
     }
   }
 }

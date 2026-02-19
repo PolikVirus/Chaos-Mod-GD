@@ -16,6 +16,7 @@ private:
     float m_elapsed = 0.f;
     bool  m_resetting = false;
     float m_resetTimer = 0.f;
+    float m_cycleSeconds = 30.f;
 };
 
 } // namespace chaosui

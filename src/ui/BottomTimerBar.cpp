@@ -5,7 +5,6 @@ using namespace geode::prelude;
 
 namespace chaosui {
 
-static constexpr float kCycleSeconds = 30.f;
 static constexpr float kResetSeconds = 0.3f;
 
 static constexpr float kBarScale = 1.10f;
@@ -25,6 +24,7 @@ void BottomTimerBar::init(cocos2d::CCNode* parent) {
     m_elapsed = 0.f;
     m_resetting = false;
     m_resetTimer = 0.f;
+    m_cycleSeconds = static_cast<float>(Mod::get()->getSettingValue<int>("timer-length"));
 
     if (m_bar.valid()) m_bar.setProgress(1.f);
 }
@@ -38,7 +38,7 @@ bool BottomTimerBar::update(float dt) {
 
     if (!m_resetting) {
         m_elapsed += dt;
-        float t = 1.f - (m_elapsed / kCycleSeconds);
+        float t = 1.f - (m_elapsed / m_cycleSeconds);
 
         if (t <= 0.f) {
             m_bar.setProgress(0.f);

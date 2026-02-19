@@ -84,7 +84,9 @@ cocos2d::CCSprite* loadFileSprite(char const* base) {
         hd.insert(dot, "-hd");
         uhd.insert(dot, "-uhd");
     } else {
+        // @geode-ignore(unknown-resource)
         hd += "-hd.png";
+        // @geode-ignore(unknown-resource)
         uhd += "-uhd.png";
     }
 
