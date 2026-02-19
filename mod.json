@@ -45,7 +45,8 @@
         "soggy-jumpscare",
         "invert-colors",
         "shake-screen",
-        "drunk-mode"
+        "drunk-mode",
+        "snow-screen"
       ],
       "enable-if": "force-event"
     }

@@ -21,6 +21,8 @@ namespace chaosmod {
 
     void registerDrunkMode(EventRegistry&);
 
+    void registerSnowEvent(EventRegistry&);
+
     void registerAllEvents(EventRegistry& reg) {
         registerSpeedX2(reg);
         registerSpeedX1_5(reg);
@@ -41,5 +43,7 @@ namespace chaosmod {
         registerShakeScreen(reg);
 
         registerDrunkMode(reg);
+
+        registerSnowEvent(reg);
     }
 }
