@@ -11,7 +11,6 @@ namespace chaosmod {
     void registerReverseControls(EventRegistry&);
 
     void registerForceMiniMode(EventRegistry&);
-    void registerForceNormalSize(EventRegistry&);
 
     void registerJumpDelay(EventRegistry&);
 
@@ -33,7 +32,6 @@ namespace chaosmod {
         registerReverseControls(reg);
 
         registerForceMiniMode(reg);
-        registerForceNormalSize(reg);
 
         registerJumpDelay(reg);
 

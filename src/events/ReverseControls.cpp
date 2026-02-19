@@ -134,6 +134,11 @@ class $modify(ReverseControlsInputHook, GJBaseGameLayer) {
     }
 };
 
+// simple pause check: gameplay not active
+static bool isPausedLike(PlayLayer* pl) {
+    return pl && !pl->isGameplayActive();
+}
+
 class ReverseControlsController : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
@@ -183,7 +188,7 @@ public:
     }
 
     void onExit() override {
-        if (!m_stopped && m_playLayer) {
+        if ((!m_stopped && m_playLayer) && !isPausedLike(m_playLayer)) {
             setActive(m_playLayer, false);
         }
         unscheduleUpdate();

@@ -25,15 +25,5 @@ void registerForceMiniMode(EventRegistry& reg) {
     ));
 }
 
-void registerForceNormalSize(EventRegistry& reg) {
-    reg.add(EventDef(
-        "size-normal",
-        "Normal Size",
-        -1.f,
-        [](PlayLayer* pl) {
-            setPlayerSizeOnce(pl, false);
-        }
-    ));
-}
 
 } // namespace chaosmod

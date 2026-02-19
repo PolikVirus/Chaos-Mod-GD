@@ -8,14 +8,23 @@ namespace chaosmod {
 static constexpr float kEventDuration = 10.f;
 static constexpr int kSpeedControllerTag = 0x53504544; // 'SPED'
 
+// helper copied from DrunkMode for pause detection
+static bool isPausedLike(PlayLayer* pl) {
+    return pl && !pl->isGameplayActive();
+}
+
 class SpeedController : public cocos2d::CCNode {
 public:
+    PlayLayer* m_playLayer = nullptr;
     float m_baseTimeScale = 1.f;
+    float m_factor = 1.f;
     bool m_restored = false;
+    bool m_wasPaused = false;
 
-    static SpeedController* create(float baseScale) {
+    static SpeedController* create(PlayLayer* pl, float baseScale) {
         auto ctrl = new SpeedController();
         if (ctrl) {
+            ctrl->m_playLayer = pl;
             ctrl->m_baseTimeScale = baseScale;
             ctrl->autorelease();
             return ctrl;
@@ -24,13 +33,24 @@ public:
     }
 
     void setFactor(float factor) {
+        m_factor = factor;
         if (auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler()) {
             sched->setTimeScale(m_baseTimeScale * factor);
         }
     }
 
+    void update(float) override {
+        // reapply when resuming from pause
+        bool paused = !m_playLayer || isPausedLike(m_playLayer);
+        if (m_wasPaused && !paused) {
+            setFactor(m_factor);
+        }
+        m_wasPaused = paused;
+    }
+
     void scheduleEnd(float duration) {
         this->stopAllActions();
+        scheduleUpdate();
         this->runAction(cocos2d::CCSequence::create(
             cocos2d::CCDelayTime::create(duration),
             cocos2d::CCCallFunc::create(this, callfunc_selector(SpeedController::restoreAndDelete)),
@@ -52,7 +72,9 @@ public:
     }
 
     void onExit() override {
-        restore();
+        if (!m_playLayer || !isPausedLike(m_playLayer)) {
+            restore();
+        }
         cocos2d::CCNode::onExit();
     }
 };
@@ -72,7 +94,7 @@ static void changePlaySpeed(PlayLayer* pl, float factor, float duration) {
     }
 
     float base = sched->getTimeScale();
-    auto ctrl = SpeedController::create(base);
+    auto ctrl = SpeedController::create(pl, base);
     if (!ctrl) return;
     ctrl->setTag(kSpeedControllerTag);
     pl->addChild(ctrl, 999999);

@@ -21,6 +21,11 @@ static bool nearlyEqual(float a, float b) {
     return diff <= 1e-4f * scale;
 }
 
+// simple pause check: gameplay not active
+static bool isPausedLike(PlayLayer* pl) {
+    return pl && !pl->isGameplayActive();
+}
+
 class GravityNode : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
@@ -32,6 +37,7 @@ public:
     PlayerObject* m_player2 = nullptr;
     bool m_finished = false;
     bool m_initialized = false;
+    bool m_wasPaused = false;
 
     static GravityNode* create(PlayLayer* pl) {
         if (!pl) return nullptr;
@@ -108,6 +114,13 @@ public:
     }
 
     void update(float) override {
+        bool paused = !m_playLayer || isPausedLike(m_playLayer);
+        if (m_wasPaused && !paused) {
+            // reapply multiplier when resuming
+            applyImmediately();
+        }
+        m_wasPaused = paused;
+
         if (!m_playLayer || m_finished) {
             unscheduleUpdate();
             return;
@@ -146,7 +159,9 @@ public:
     }
 
     void onExit() override {
-        stop();
+        if (!m_playLayer || !isPausedLike(m_playLayer)) {
+            stop();
+        }
         cocos2d::CCNode::onExit();
     }
 };
