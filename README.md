@@ -12,7 +12,7 @@ You can change the countdown time in the settings.
 
 ## Events
 
-Chaos Mod GD v1.0.0 currently has these events:
+Chaos Mod GD v1.0.0-beta.1 currently has these events:
  * speed x0.5
  * speed x1.5
  * speed x2
