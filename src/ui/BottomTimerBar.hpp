@@ -7,16 +7,16 @@ namespace chaosui {
 class BottomTimerBar {
 public:
     void init(cocos2d::CCNode* parent);
-    // returns true exactly when the timer hits 0 and an event should fire
+    // Returns true when the timer hits 0 and an event should fire
     bool update(float dt);
 
 private:
-    SegmentBarWidget m_bar;
+    SegmentBarWidget m_timerBar;
 
-    float m_elapsed = 0.f;
-    bool  m_resetting = false;
-    float m_resetTimer = 0.f;
-    float m_cycleSeconds = 30.f;
+    float m_timeElapsed = 0.f;
+    bool  m_isResetting = false;
+    float m_resetTime = 0.f;
+    float m_cycleDuration = 30.f;
 };
 
 } // namespace chaosui

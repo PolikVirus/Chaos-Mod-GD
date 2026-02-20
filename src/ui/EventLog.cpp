@@ -53,26 +53,26 @@ void EventLog::init(cocos2d::CCNode* parent) {
 void EventLog::add(std::string const& name, float durationSeconds) {
     if (!m_root) return;
 
-    Line ln;
-    ln.name = name;
+    Line line;
+    line.name = name;
 
     if (durationSeconds > 0.f) {
-        ln.timeLeft = durationSeconds;
-        ln.showTimer = true;
+        line.timeLeft = durationSeconds;
+        line.showTimer = true;
     }
     else if (durationSeconds == 0.f) {
         // legacy behavior: default 10s with countdown
-        ln.timeLeft = kDefaultLifetime;
-        ln.showTimer = true;
+        line.timeLeft = kDefaultLifetime;
+        line.showTimer = true;
     }
     else {
         // NEW: no countdown shown, but still expires after default 10s
-        ln.timeLeft = kDefaultLifetime;
-        ln.showTimer = false;
+        line.timeLeft = kDefaultLifetime;
+        line.showTimer = false;
     }
 
     // newest first
-    m_lines.push_front(std::move(ln));
+    m_lines.push_front(std::move(line));
     while ((int)m_lines.size() > kMaxLines) {
         m_lines.pop_back();
     }
@@ -104,31 +104,31 @@ void EventLog::update(float dt) {
 }
 
 void EventLog::refreshText() {
-    int n = (int)m_lines.size();
+    int numLines = (int)m_lines.size();
 
     for (int i = 0; i < kMaxLines; i++) {
-        auto& s = m_slots[i];
+        auto& slot = m_slots[i];
 
-        if (i >= n) {
-            s.active = false;
-            if (s.label) s.label->setString("");
-            if (s.node) s.node->setVisible(false);
+        if (i >= numLines) {
+            slot.active = false;
+            if (slot.label) slot.label->setString("");
+            if (slot.node) slot.node->setVisible(false);
             continue;
         }
 
-        s.active = true;
-        if (s.node) s.node->setVisible(true);
+        slot.active = true;
+        if (slot.node) slot.node->setVisible(true);
 
-        auto const& ln = m_lines[i];
+        auto const& line = m_lines[i];
 
-        if (!ln.showTimer) {
-            if (s.label) s.label->setString(ln.name.c_str());
+        if (!line.showTimer) {
+            if (slot.label) slot.label->setString(line.name.c_str());
             continue;
         }
 
-        float tl = std::max(0.f, ln.timeLeft);
-        auto text = fmt::format("{} {:.1f}s", ln.name, tl);
-        if (s.label) s.label->setString(text.c_str());
+        float timeLeft = std::max(0.f, line.timeLeft);
+        auto text = fmt::format("{} {:.1f}s", line.name, timeLeft);
+        if (slot.label) slot.label->setString(text.c_str());
     }
 }
 
@@ -136,13 +136,13 @@ void EventLog::layout() {
     if (!m_root) return;
 
     auto win = cocos2d::CCDirector::sharedDirector()->getWinSize();
-    float xRight = win.width - kRightPad;
-    float yTop   = win.height - kTopPad;
+    float rightX = win.width - kRightPad;
+    float topY   = win.height - kTopPad;
 
     for (int i = 0; i < kMaxLines; i++) {
-        auto& s = m_slots[i];
-        if (!s.node) continue;
-        s.node->setPosition({xRight, yTop - i * kLineGap});
+        auto& slot = m_slots[i];
+        if (!slot.node) continue;
+        slot.node->setPosition({rightX, topY - i * kLineGap});
     }
 }
 

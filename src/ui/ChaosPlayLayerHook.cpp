@@ -28,7 +28,7 @@ static chaosmod::EventDef const* findEventById(std::string const& id) {
     return nullptr;
 }
 
-// debug forcing (kept)
+// debug
 static bool isForceEnabled() {
     auto mod = Mod::get();
     if (!mod || !mod->hasSetting("force-event")) return false;
@@ -63,9 +63,9 @@ $execute {
 
 class $modify(ChaosBarPlayLayer, PlayLayer) {
     struct Fields {
-        chaosui::BottomTimerBar bottom;
-        chaosui::EventLog log;
-        bool uiInited = false;
+        chaosui::BottomTimerBar m_timerBar;
+        chaosui::EventLog m_eventLog;
+        bool m_isUIInitialized = false;
     };
 
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
@@ -78,9 +78,9 @@ class $modify(ChaosBarPlayLayer, PlayLayer) {
             ? static_cast<cocos2d::CCNode*>(this->m_uiLayer)
             : static_cast<cocos2d::CCNode*>(this);
 
-        m_fields->bottom.init(parent);
-        m_fields->log.init(parent);
-        m_fields->uiInited = true;
+        m_fields->m_timerBar.init(parent);
+        m_fields->m_eventLog.init(parent);
+        m_fields->m_isUIInitialized = true;
 
         return true;
     }
@@ -88,15 +88,15 @@ class $modify(ChaosBarPlayLayer, PlayLayer) {
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
         if (!this->isGameplayActive()) return;
-        if (!m_fields->uiInited) return;
+        if (!m_fields->m_isUIInitialized) return;
 
         // Keep log positioned correctly (text-only log)
-        m_fields->log.update(dt);
+        m_fields->m_eventLog.update(dt);
 
         // Bottom bar ticks; when true -> fire event NOW
-        if (m_fields->bottom.update(dt)) {
+        if (m_fields->m_timerBar.update(dt)) {
             if (auto ev = pickEvent()) {
-                m_fields->log.add(ev->name, ev->duration);
+                m_fields->m_eventLog.add(ev->name, ev->duration);
                 if (ev->run) ev->run(this);
             }
         }
