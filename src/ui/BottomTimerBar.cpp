@@ -12,6 +12,9 @@ static constexpr float kBarY     = 24.f;
 static constexpr float kInsetPx  = 6.f;
 
 void BottomTimerBar::init(cocos2d::CCNode* parent) {
+    // Check the setting; if disabled, do nothing (no timer bar)
+    if (!Mod::get()->getSettingValue<bool>("mod-enabled")) return;
+
     if (m_bar.root) m_bar.destroy();
 
     m_bar = createSegmentBar(parent, kBarScale, kInsetPx, 0, 1);
@@ -30,6 +33,9 @@ void BottomTimerBar::init(cocos2d::CCNode* parent) {
 }
 
 bool BottomTimerBar::update(float dt) {
+    // Check the setting; if disabled, do nothing (no timer updates)
+    if (!Mod::get()->getSettingValue<bool>("mod-enabled")) return false;
+
     if (!m_bar.valid()) return false;
 
     // keep pinned if resolution changes

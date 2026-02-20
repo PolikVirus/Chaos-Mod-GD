@@ -16,7 +16,7 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 30.f;
+static constexpr float kEventDuration = 10.f;
 static constexpr int kControllerTag = 0x464C5048; // 'FLPH'
 
 static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {

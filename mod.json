@@ -21,6 +21,12 @@
     ]
   },
   "settings": {
+    "mod-enabled": {
+      "type": "bool",
+      "name": "Enable Mod",
+      "description": "Enable or disable the Chaos Mod",
+      "default": true
+    },
     "debug-title": {
       "type": "title",
       "name": "Debug"
