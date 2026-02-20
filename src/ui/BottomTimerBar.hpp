@@ -7,7 +7,6 @@ namespace chaosui {
 class BottomTimerBar {
 public:
     void init(cocos2d::CCNode* parent);
-    // Returns true when the timer hits 0 and an event should fire
     bool update(float dt);
 
 private:

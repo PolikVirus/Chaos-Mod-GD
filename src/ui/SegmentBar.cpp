@@ -33,7 +33,7 @@ void SegmentBarWidget::setProgress(float progress) {
 
     progress = std::clamp(progress, 0.f, 1.f);
 
-    // Fallback: just resize the solid color rect
+    // fallback
     if (solidFill) {
         float w = fillW * progress;
         if (w < 0.f) w = 0.f;
@@ -41,7 +41,6 @@ void SegmentBarWidget::setProgress(float progress) {
         return;
     }
 
-    // Segmented fill
     float fillLength = fillW * progress;
 
     int fullSegments = (segmentWidth > 0.f) ? (int)std::floor(fillLength / segmentWidth) : 0;
@@ -72,7 +71,6 @@ void SegmentBarWidget::setProgress(float progress) {
     }
 }
 
-// FILE FIRST, then -hd/-uhd, then SpriteFrameCache as last resort
 cocos2d::CCSprite* loadFileSprite(char const* base) {
     if (!base) return nullptr;
 
@@ -102,13 +100,10 @@ cocos2d::CCSprite* loadFileSprite(char const* base) {
 }
 
 static void enableSolidFallback(SegmentBarWidget& out) {
-    // Yellow-ish fill to match GD bar vibe
     auto col = cocos2d::ccc4(255, 220, 0, 255);
 
     out.solidFill = cocos2d::CCLayerColor::create(col, out.fillW, out.fillH);
     if (!out.solidFill) return;
-
-    // fillNode is left-anchored at x=-fillW/2, so draw from x=0
     out.solidFill->setPosition({0.f, -out.fillH / 2.f});
     out.fillNode->addChild(out.solidFill, 0);
 
@@ -139,15 +134,12 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
     out.fillW = std::max(10.f, grooveW - inset);
     out.fillH = std::max(6.f,  grooveH - inset);
 
-    // Fill container: left-aligned inside the groove
     out.fillNode = cocos2d::CCNode::create();
     out.fillNode->setPosition({-out.fillW / 2.f, 0.f});
     out.root->addChild(out.fillNode, zFill);
 
-    // Frame on top (same as before)
     out.root->addChild(out.groove, zFrame);
 
-    // Try segmented texture
     auto segProto = loadFileSprite("sliderBar.png");
     if (!segProto || !segProto->getTexture() ||
         segProto->getContentSize().width <= 1.f ||
@@ -171,13 +163,12 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
 
         seg->setAnchorPoint({0.f, 0.5f});
         seg->setScale(scale);
-        seg->setPosition({i * out.segmentWidth, 0.f}); // fillNode already moved to left edge
+        seg->setPosition({i * out.segmentWidth, 0.f});
         out.fillNode->addChild(seg, 0);
 
         out.segments.push_back(seg);
     }
 
-    // If for any reason no segments were created, fallback instead of being "invalid"
     if (out.segments.empty()) {
         geode::log::warn("[Chaos Mod] sliderBar.png loaded but segments creation failed -> fallback");
         enableSolidFallback(out);
