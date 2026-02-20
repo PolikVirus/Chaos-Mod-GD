@@ -15,56 +15,56 @@ void BottomTimerBar::init(cocos2d::CCNode* parent) {
     // Check the setting; if disabled, do nothing (no timer bar)
     if (!Mod::get()->getSettingValue<bool>("mod-enabled")) return;
 
-    if (m_bar.root) m_bar.destroy();
+    if (m_timerBar.root) m_timerBar.destroy();
 
-    m_bar = createSegmentBar(parent, kBarScale, kInsetPx, 0, 1);
-    if (!m_bar.root) return;
+    m_timerBar = createSegmentBar(parent, kBarScale, kInsetPx, 0, 1);
+    if (!m_timerBar.root) return;
 
     auto win = cocos2d::CCDirector::sharedDirector()->getWinSize();
-    m_bar.root->setPosition({win.width / 2.f, kBarY});
-    m_bar.root->setZOrder(10000);
+    m_timerBar.root->setPosition({win.width / 2.f, kBarY});
+    m_timerBar.root->setZOrder(10000);
 
-    m_elapsed = 0.f;
-    m_resetting = false;
-    m_resetTimer = 0.f;
-    m_cycleSeconds = static_cast<float>(Mod::get()->getSettingValue<int>("timer-length"));
+    m_timeElapsed = 0.f;
+    m_isResetting = false;
+    m_resetTime = 0.f;
+    m_cycleDuration = static_cast<float>(Mod::get()->getSettingValue<int>("timer-length"));
 
-    if (m_bar.valid()) m_bar.setProgress(1.f);
+    if (m_timerBar.valid()) m_timerBar.setProgress(1.f);
 }
 
 bool BottomTimerBar::update(float dt) {
     // Check the setting; if disabled, do nothing (no timer updates)
     if (!Mod::get()->getSettingValue<bool>("mod-enabled")) return false;
 
-    if (!m_bar.valid()) return false;
+    if (!m_timerBar.valid()) return false;
 
     // keep pinned if resolution changes
     auto win = cocos2d::CCDirector::sharedDirector()->getWinSize();
-    m_bar.root->setPosition({win.width / 2.f, kBarY});
+    m_timerBar.root->setPosition({win.width / 2.f, kBarY});
 
-    if (!m_resetting) {
-        m_elapsed += dt;
-        float t = 1.f - (m_elapsed / m_cycleSeconds);
+    if (!m_isResetting) {
+        m_timeElapsed += dt;
+        float progress = 1.f - (m_timeElapsed / m_cycleDuration);
 
-        if (t <= 0.f) {
-            m_bar.setProgress(0.f);
-            m_resetting = true;
-            m_resetTimer = 0.f;
+        if (progress <= 0.f) {
+            m_timerBar.setProgress(0.f);
+            m_isResetting = true;
+            m_resetTime = 0.f;
             return true; // fire event now
         } else {
-            m_bar.setProgress(std::clamp(t, 0.f, 1.f));
+            m_timerBar.setProgress(std::clamp(progress, 0.f, 1.f));
         }
     } else {
-        m_resetTimer += dt;
-        float r = m_resetTimer / kResetSeconds;
+        m_resetTime += dt;
+        float resetProgress = m_resetTime / kResetSeconds;
 
-        if (r >= 1.f) {
-            r = 1.f;
-            m_resetting = false;
-            m_elapsed = 0.f;
+        if (resetProgress >= 1.f) {
+            resetProgress = 1.f;
+            m_isResetting = false;
+            m_timeElapsed = 0.f;
         }
 
-        m_bar.setProgress(std::clamp(r, 0.f, 1.f));
+        m_timerBar.setProgress(std::clamp(resetProgress, 0.f, 1.f));
     }
 
     return false;

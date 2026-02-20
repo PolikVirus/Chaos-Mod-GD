@@ -17,7 +17,7 @@ void SegmentBarWidget::destroy() {
     fillNode = nullptr;
     segments.clear();
     solidFill = nullptr;
-    width = fillW = fillH = segW = segFullW = 0.f;
+    width = fillW = fillH = segmentWidth = fullSegmentWidth = 0.f;
 }
 
 void SegmentBarWidget::setVisible(bool v) {
@@ -28,39 +28,39 @@ bool SegmentBarWidget::isVisible() const {
     return root && root->isVisible();
 }
 
-void SegmentBarWidget::setProgress(float t01) {
+void SegmentBarWidget::setProgress(float progress) {
     if (!valid()) return;
 
-    t01 = std::clamp(t01, 0.f, 1.f);
+    progress = std::clamp(progress, 0.f, 1.f);
 
     // Fallback: just resize the solid color rect
     if (solidFill) {
-        float w = fillW * t01;
+        float w = fillW * progress;
         if (w < 0.f) w = 0.f;
         solidFill->setContentSize({ w, fillH });
         return;
     }
 
     // Segmented fill
-    float fillLen = fillW * t01;
+    float fillLength = fillW * progress;
 
-    int fullCount = (segW > 0.f) ? (int)std::floor(fillLen / segW) : 0;
-    float remainder = (segW > 0.f) ? (fillLen - fullCount * segW) : 0.f;
+    int fullSegments = (segmentWidth > 0.f) ? (int)std::floor(fillLength / segmentWidth) : 0;
+    float remainingLength = (segmentWidth > 0.f) ? (fillLength - fullSegments * segmentWidth) : 0.f;
 
     for (int i = 0; i < (int)segments.size(); i++) {
         auto seg = segments[i];
         if (!seg) continue;
 
-        if (i < fullCount) {
+        if (i < fullSegments) {
             seg->setVisible(true);
             seg->setTextureRect(segFullRect);
         }
-        else if (i == fullCount && remainder > 0.001f) {
+        else if (i == fullSegments && remainingLength > 0.001f) {
             seg->setVisible(true);
 
-            float ratio = remainder / segW;
-            float newW  = segFullW * ratio;
-            newW = std::clamp(newW, 0.1f, segFullW);
+            float ratio = remainingLength / segmentWidth;
+            float newW  = fullSegmentWidth * ratio;
+            newW = std::clamp(newW, 0.1f, fullSegmentWidth);
 
             auto r = segFullRect;
             r.size.width = newW;
@@ -159,10 +159,10 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
     }
 
     out.segFullRect = segProto->getTextureRect();
-    out.segFullW = out.segFullRect.size.width;
-    out.segW = segProto->getContentSize().width * scale;
+    out.fullSegmentWidth = out.segFullRect.size.width;
+    out.segmentWidth = segProto->getContentSize().width * scale;
 
-    int count = (out.segW > 0.f) ? (int)std::ceil(out.fillW / out.segW) + 2 : 0;
+    int count = (out.segmentWidth > 0.f) ? (int)std::ceil(out.fillW / out.segmentWidth) + 2 : 0;
     out.segments.reserve(std::max(0, count));
 
     for (int i = 0; i < count; i++) {
@@ -171,7 +171,7 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
 
         seg->setAnchorPoint({0.f, 0.5f});
         seg->setScale(scale);
-        seg->setPosition({i * out.segW, 0.f}); // fillNode already moved to left edge
+        seg->setPosition({i * out.segmentWidth, 0.f}); // fillNode already moved to left edge
         out.fillNode->addChild(seg, 0);
 
         out.segments.push_back(seg);
