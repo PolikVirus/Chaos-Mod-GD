@@ -38,7 +38,7 @@ void EventLog::init(cocos2d::CCNode* parent) {
         if (s.label) {
             s.label->setScale(kTextScale);
             s.label->setOpacity(230);
-            s.label->setAnchorPoint({1.f, 0.5f}); // right aligned
+            s.label->setAnchorPoint({1.f, 0.5f});
             s.node->addChild(s.label, 1);
         }
 
@@ -61,12 +61,12 @@ void EventLog::add(std::string const& name, float durationSeconds) {
         line.showTimer = true;
     }
     else if (durationSeconds == 0.f) {
-        // legacy behavior: default 10s with countdown
+        // legacy
         line.timeLeft = kDefaultLifetime;
         line.showTimer = true;
     }
     else {
-        // NEW: no countdown shown, but still expires after default 10s
+        // NEW
         line.timeLeft = kDefaultLifetime;
         line.showTimer = false;
     }

@@ -77,23 +77,20 @@ public:
     void start() {
         if (!m_playLayer) return;
         m_timeLeft = kEventDuration;
-        auto sc = scene();
-        if (!sc) return;
+        auto currentScene = scene();
+        if (!currentScene) return;
 
-        // Create snow particle system
         m_snowParticles = cocos2d::CCParticleSnow::create();
         if (m_snowParticles) {
-            // Center the particle system on screen
             auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
             m_snowParticles->setPosition(cocos2d::CCPoint(winSize.width / 2, winSize.height / 2));
-            // Increase variance to cover entire screen evenly
             m_snowParticles->setPosVar(cocos2d::CCPoint(winSize.width / 2 + 50, winSize.height / 2 + 50));
             m_snowParticles->setLife(8.f);
             m_snowParticles->setLifeVar(4.f);
             m_snowParticles->setSpeed(80.f);
             m_snowParticles->setSpeedVar(30.f);
-            m_snowParticles->setEmissionRate(m_originalEmissionRate); // More particles for better coverage
-            sc->addChild(m_snowParticles, std::numeric_limits<int>::max());
+            m_snowParticles->setEmissionRate(m_originalEmissionRate); 
+            currentScene->addChild(m_snowParticles, std::numeric_limits<int>::max());
         }
 
         scheduleUpdate();
@@ -101,9 +98,9 @@ public:
 
     void update(float dt) override {
         if (m_restored) { unscheduleUpdate(); return; }
-        auto sc = scene();
-        if (!sc || !m_playLayer) { restoreAndDelete(); return; }
-        if (!isDescendant(sc, m_playLayer)) { restoreAndDelete(); return; }
+        auto currentScene = scene();
+        if (!currentScene || !m_playLayer) { restoreAndDelete(); return; }
+        if (!isDescendant(currentScene, m_playLayer)) { restoreAndDelete(); return; }
         
         bool paused = isPauseMenuOpen(m_playLayer);
         if (paused) {

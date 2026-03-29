@@ -1,3 +1,4 @@
+// kinda vibecoded :(
 #ifndef CHAOSUI_EVENTLOG_HPP
 #define CHAOSUI_EVENTLOG_HPP
 

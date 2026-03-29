@@ -15,141 +15,179 @@ static constexpr float kLowGravityMultiplier = 0.5f;
 static constexpr float kHighGravityMultiplier = 2.0f;
 static constexpr int kGravityTag = 0x47524156; // 'GRAV'
 
+static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+    if (!node) return nullptr;
+    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
+
+    auto children = node->getChildren();
+    if (!children) return nullptr;
+
+    for (auto obj : CCArrayExt(children)) {
+        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
+            if (auto pl = findPlayLayerRecursive(child)) return pl;
+        }
+    }
+    return nullptr;
+}
+
+static PlayLayer* findCurrentPlayLayer() {
+    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+}
+
+static bool isPausedLike(PlayLayer* pl) {
+    return pl && !pl->isGameplayActive();
+}
+
 static bool nearlyEqual(float a, float b) {
     float diff = std::fabs(a - b);
     float scale = std::fmax(1.f, std::fmax(std::fabs(a), std::fabs(b)));
     return diff <= 1e-4f * scale;
 }
 
-// simple pause check: gameplay not active
-static bool isPausedLike(PlayLayer* pl) {
-    return pl && !pl->isGameplayActive();
-}
-
 class GravityNode : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
+    PlayerObject* m_player1 = nullptr;
+    PlayerObject* m_player2 = nullptr;
     float m_player1Base = 1.f;
     float m_player2Base = 1.f;
     bool m_hasPlayer2 = false;
     float m_multiplier = 1.f;
-    PlayerObject* m_player1 = nullptr;
-    PlayerObject* m_player2 = nullptr;
+    float m_timeRemaining = 0.f;
     bool m_finished = false;
     bool m_initialized = false;
-    bool m_wasPaused = false;
 
     static GravityNode* create(PlayLayer* pl) {
-        if (!pl) return nullptr;
         auto node = new GravityNode();
+        if (!node) return nullptr;
         node->m_playLayer = pl;
         node->autorelease();
         return node;
     }
 
-    void start(float mul, float seconds) {
-        if (!m_playLayer) return;
+    void captureCurrentPlayers() {
+        if (!m_playLayer) {
+            m_player1 = nullptr;
+            m_player2 = nullptr;
+            m_hasPlayer2 = false;
+            return;
+        }
 
-        if (!m_initialized) {
-            if (m_playLayer->m_player1) {
-                m_player1Base = m_playLayer->m_player1->m_gravityMod;
-                m_player1 = m_playLayer->m_player1;
-            }
-            if (m_playLayer->m_player2) {
-                m_player2Base = m_playLayer->m_player2->m_gravityMod;
-                m_player2 = m_playLayer->m_player2;
-                m_hasPlayer2 = true;
-            } else {
-                m_hasPlayer2 = false;
-                m_player2 = nullptr;
-            }
+        m_player1 = m_playLayer->m_player1;
+        m_player2 = m_playLayer->m_player2;
+        m_hasPlayer2 = m_player2 != nullptr;
+
+        if (m_player1) m_player1Base = m_player1->m_gravityMod;
+        if (m_player2) m_player2Base = m_player2->m_gravityMod;
+    }
+
+    void bindToPlayLayer(PlayLayer* pl, bool recaptureBase) {
+        m_playLayer = pl;
+        if (recaptureBase || !m_initialized) {
+            captureCurrentPlayers();
             m_initialized = true;
-        } else {
+            return;
+        }
+
+        if (m_playLayer) {
             if (m_playLayer->m_player1 && m_playLayer->m_player1 != m_player1) {
                 m_player1 = m_playLayer->m_player1;
                 m_player1Base = m_player1->m_gravityMod;
             }
-            if (m_playLayer->m_player2) {
+            if (m_playLayer->m_player2 && m_playLayer->m_player2 != m_player2) {
+                m_player2 = m_playLayer->m_player2;
+                m_player2Base = m_player2->m_gravityMod;
                 m_hasPlayer2 = true;
-                if (m_playLayer->m_player2 != m_player2) {
-                    m_player2 = m_playLayer->m_player2;
-                    m_player2Base = m_player2->m_gravityMod;
-                }
-            } else {
-                m_hasPlayer2 = false;
+            } else if (!m_playLayer->m_player2) {
                 m_player2 = nullptr;
+                m_hasPlayer2 = false;
             }
         }
+    }
+
+    void start(PlayLayer* pl, float mul, float seconds) {
+        bool playLayerChanged = pl && pl != m_playLayer;
+        bindToPlayLayer(pl ? pl : findCurrentPlayLayer(), playLayerChanged || !m_initialized);
         m_multiplier = mul;
-        applyImmediately();
+        m_timeRemaining = seconds;
+        m_finished = false;
+        applyCurrentGravity();
         scheduleUpdate();
-        armTimer(seconds);
     }
 
-    void applyImmediately() {
+    void applyCurrentGravity() {
         if (!m_playLayer || m_finished) return;
-        if (m_playLayer->m_player1) {
-            m_playLayer->m_player1->m_gravityMod = m_player1Base * m_multiplier;
-        }
-        if (m_hasPlayer2 && m_playLayer->m_player2) {
-            m_playLayer->m_player2->m_gravityMod = m_player2Base * m_multiplier;
-        }
-    }
 
-    void syncPlayer(PlayerObject*& lastPtr, float& base, PlayerObject* current) {
-        if (!current) return;
-        if (current != lastPtr) {
-            lastPtr = current;
-            base = current->m_gravityMod;
+        auto p1 = m_playLayer->m_player1;
+        if (p1) {
+            if (p1 != m_player1) {
+                m_player1 = p1;
+                m_player1Base = p1->m_gravityMod;
+            }
+            p1->m_gravityMod = m_player1Base * m_multiplier;
         }
-        float wanted = base * m_multiplier;
-        float cur = current->m_gravityMod;
-        if (nearlyEqual(cur, wanted)) return;
-        if (std::fabs(cur - wanted) < std::fabs(cur - base)) {
-            current->m_gravityMod = wanted;
+
+        auto p2 = m_playLayer->m_player2;
+        if (p2) {
+            if (p2 != m_player2) {
+                m_player2 = p2;
+                m_player2Base = p2->m_gravityMod;
+            }
+            m_hasPlayer2 = true;
+            p2->m_gravityMod = m_player2Base * m_multiplier;
         } else {
-            base = cur;
-            current->m_gravityMod = base * m_multiplier;
+            m_player2 = nullptr;
+            m_hasPlayer2 = false;
         }
     }
 
-    void update(float) override {
-        bool paused = !m_playLayer || isPausedLike(m_playLayer);
-        if (m_wasPaused && !paused) {
-            // reapply multiplier when resuming
-            applyImmediately();
+    void restoreCurrentGravity() {
+        if (!m_playLayer) return;
+
+        if (auto p1 = m_playLayer->m_player1) {
+            if (m_player1 && p1 == m_player1) {
+                p1->m_gravityMod = m_player1Base;
+            } else if (nearlyEqual(p1->m_gravityMod, m_player1Base * m_multiplier)) {
+                p1->m_gravityMod = m_player1Base;
+            }
         }
-        m_wasPaused = paused;
+
+        if (auto p2 = m_playLayer->m_player2) {
+            if (m_player2 && p2 == m_player2) {
+                p2->m_gravityMod = m_player2Base;
+            } else if (m_hasPlayer2 && nearlyEqual(p2->m_gravityMod, m_player2Base * m_multiplier)) {
+                p2->m_gravityMod = m_player2Base;
+            }
+        }
+    }
+
+    void update(float dt) override {
+        auto current = findCurrentPlayLayer();
+        if (current && current != m_playLayer) {
+            bindToPlayLayer(current, true);
+        }
 
         if (!m_playLayer || m_finished) {
             unscheduleUpdate();
             return;
         }
-        syncPlayer(m_player1, m_player1Base, m_playLayer->m_player1);
-        if (m_hasPlayer2) {
-            syncPlayer(m_player2, m_player2Base, m_playLayer->m_player2);
-        }
-    }
 
-    void armTimer(float seconds) {
-        stopAllActions();
-        runAction(cocos2d::CCSequence::create(
-            cocos2d::CCDelayTime::create(seconds),
-            cocos2d::CCCallFunc::create(this, callfunc_selector(GravityNode::stopAndCleanup)),
-            nullptr
-        ));
+        applyCurrentGravity();
+
+        if (isPausedLike(m_playLayer)) {
+            return;
+        }
+
+        m_timeRemaining -= dt;
+        if (m_timeRemaining <= 0.f) {
+            stopAndCleanup();
+        }
     }
 
     void stop() {
         if (m_finished) return;
         m_finished = true;
-        if (!m_playLayer) return;
-        if (m_playLayer->m_player1) {
-            m_playLayer->m_player1->m_gravityMod = m_player1Base;
-        }
-        if (m_hasPlayer2 && m_playLayer->m_player2) {
-            m_playLayer->m_player2->m_gravityMod = m_player2Base;
-        }
+        restoreCurrentGravity();
         unscheduleUpdate();
     }
 
@@ -159,27 +197,29 @@ public:
     }
 
     void onExit() override {
-        if (!m_playLayer || !isPausedLike(m_playLayer)) {
-            stop();
-        }
+        m_finished = true;
+        unscheduleUpdate();
         cocos2d::CCNode::onExit();
     }
 };
 
 static void runGravityEffect(PlayLayer* pl, float mul, float seconds) {
-    if (!pl) return;
-    if (auto existing = pl->getChildByTag(kGravityTag)) {
-        if (auto node = dynamic_cast<GravityNode*>(existing)) {
-            node->start(mul, seconds);
+    auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
+    if (!scene) return;
+
+    if (auto existing = scene->getChildByTag(kGravityTag)) {
+        if (auto node = typeinfo_cast<GravityNode*>(existing)) {
+            node->start(pl, mul, seconds);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
+
     auto node = GravityNode::create(pl);
     if (!node) return;
     node->setTag(kGravityTag);
-    pl->addChild(node, 999999);
-    node->start(mul, seconds);
+    scene->addChild(node, 999999);
+    node->start(pl, mul, seconds);
 }
 
 void registerLowGravity(EventRegistry& reg) {

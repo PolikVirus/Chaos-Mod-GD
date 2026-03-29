@@ -30,6 +30,8 @@ namespace chaosmod {
 
     void registerFlipHorizontal(EventRegistry&);
 
+    void registerFPS20Event(EventRegistry&);
+
     void registerAllEvents(EventRegistry& reg) {
         registerSpeedX2(reg);
         registerSpeedX1_5(reg);
@@ -59,5 +61,7 @@ namespace chaosmod {
         registerFlipVertical(reg);
 
         registerFlipHorizontal(reg);
+
+        registerFPS20Event(reg);
     }
 }
