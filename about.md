@@ -10,9 +10,11 @@ Made by [Polik](https://gdbrowser.com/u/polikyt)
 Chaos mod GD adds random events every time the timer hits 0. The events vary from jumpscares to speed increases.
 You can change the countdown time in the settings.
 
+Use the debug features if you spot bugs and contact me in GitHub issues
+
 ## Events
 
-Chaos Mod GD v1.0.0-beta.1 currently has these events:
+Chaos Mod GD v1.0.0 currently has these events:
  * speed x0.5
  * speed x1.5
  * speed x2
@@ -30,5 +32,6 @@ Chaos Mod GD v1.0.0-beta.1 currently has these events:
  * snow screen
  * flip vertical
  * flip horizontal
+ * fps 20
 
 Expect to see more events in future updates!
