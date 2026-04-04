@@ -32,7 +32,7 @@ static void startSoggy(PlayLayer* pl) {
         spr->setScaleX(win.width / sz.width);
         spr->setScaleY(win.height / sz.height);
     }
-    parent->addChild(spr);
+    parent->addChild(spr); //not sure why forceing z layer is bad but whatever
     spr->runAction(cocos2d::CCSequence::create(
         cocos2d::CCDelayTime::create(showSecs),
         cocos2d::CCFadeOut::create(fadeSecs),
