@@ -15,6 +15,4 @@
   * low pitch
   * drunk mode
   * snow screen
-~~* flip vertical~~
-~~* flip horizontal~~
   * fps 20
