@@ -26,10 +26,6 @@ namespace chaosmod {
 
     void registerSnowEvent(EventRegistry&);
 
-    void registerFlipVertical(EventRegistry&);
-
-    void registerFlipHorizontal(EventRegistry&);
-
     void registerFPS20Event(EventRegistry&);
 
     void registerAllEvents(EventRegistry& reg) {
@@ -57,10 +53,6 @@ namespace chaosmod {
         registerDrunkMode(reg);
 
         registerSnowEvent(reg);
-
-        registerFlipVertical(reg);
-
-        registerFlipHorizontal(reg);
 
         registerFPS20Event(reg);
     }
