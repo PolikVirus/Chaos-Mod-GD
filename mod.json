@@ -13,8 +13,12 @@
   "links": {
     "source": "https://github.com/PolikVirus/Chaos-Mod-GD"
   },
-  "tags": ["gameplay", "offline", "joke"],
-  "description": "Random events happen every 30 seconds. Chaos!",
+  "tags": [
+    "gameplay",
+    "offline",
+    "joke"
+  ],
+  "description": "Random stuff happens every so often",
   "resources": {
     "files": [
       "resources/Soggy.jpg"
@@ -24,8 +28,16 @@
     "mod-enabled": {
       "type": "bool",
       "name": "Enable Mod",
-      "description": "Enable or disable the Chaos Mod",
+      "description": "Turns the mod on or off.",
       "default": true
+    },
+    "timer-length": {
+      "type": "int",
+      "name": "Timer Length",
+      "description": "Seconds between events.",
+      "default": 30,
+      "min": 5,
+      "max": 60
     },
     "debug-title": {
       "type": "title",
@@ -34,13 +46,13 @@
     "force-event": {
       "type": "bool",
       "name": "Force event",
-      "description": "If enabled, Chaos Mod will always run the selected event instead of random.",
+      "description": "Always run the event you picked instead of rolling one.",
       "default": false
     },
     "forced-event-id": {
       "type": "string",
       "name": "Forced event",
-      "description": "Which event to run when Force event is enabled.",
+      "description": "Which event to use when Force event is on.",
       "default": "random",
       "one-of": [
         "random",
@@ -64,14 +76,6 @@
         "fps-20"
       ],
       "enable-if": "force-event"
-    },
-    "timer-length": {
-      "type": "int",
-      "name": "Timer Length",
-      "description": "How long between events (in seconds)",
-      "default": 30,
-      "min": 5,
-      "max": 60
     }
   }
 }
