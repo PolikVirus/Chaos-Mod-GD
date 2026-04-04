@@ -1,6 +1,5 @@
 # Chaos Mod GD
 
----
 
 Made by [Polik](https://gdbrowser.com/u/polikyt)
 <cr>Inspired by [Chaos Mod V](https://github.com/gta-chaos-mod/ChaosModV)</c>
@@ -31,8 +30,6 @@ Chaos Mod GD v1.0.0 currently has these events:
  * low pitch
  * drunk mode
  * snow screen
- * flip vertical
- * flip horizontal
  * fps 20
 
 Expect to see more events in future updates!
