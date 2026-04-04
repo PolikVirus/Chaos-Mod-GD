@@ -3,7 +3,7 @@
 ---
 
 Made by [Polik](https://gdbrowser.com/u/polikyt)
-
+Inspired by [Chaos Mod V](https://github.com/gta-chaos-mod/ChaosModV)
 
 ---
 ## About
