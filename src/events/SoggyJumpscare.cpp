@@ -32,7 +32,7 @@ static void startSoggy(PlayLayer* pl) {
         spr->setScaleX(win.width / sz.width);
         spr->setScaleY(win.height / sz.height);
     }
-    parent->addChild(spr, 999999);
+    parent->addChild(spr);
     spr->runAction(cocos2d::CCSequence::create(
         cocos2d::CCDelayTime::create(showSecs),
         cocos2d::CCFadeOut::create(fadeSecs),
