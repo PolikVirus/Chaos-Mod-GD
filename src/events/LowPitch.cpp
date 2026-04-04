@@ -7,12 +7,12 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 30.f;
-static constexpr int kLowPitchControllerTag = 0x4c4f5750; // 'LOWP'
-static constexpr float kTargetPitch = 0.7f;
-static constexpr float kDefaultPitch = 1.0f;
+static constexpr float dur = 30.f;
+static constexpr int pitchTag = 0x4c4f5750;
+static constexpr float pitchDown = 0.7f;
+static constexpr float basePitch = 1.0f;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -21,24 +21,24 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
-class LowPitchController : public cocos2d::CCNode {
+class PitchDownCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
     float m_timeRemaining = 0.f;
     bool m_isRestored = false;
 
-    static LowPitchController* create(PlayLayer* pl) {
-        auto ctrl = new LowPitchController();
+    static PitchDownCtrl* create(PlayLayer* pl) {
+        auto ctrl = new PitchDownCtrl();
         if (!ctrl) return nullptr;
         ctrl->m_playLayer = pl;
         ctrl->autorelease();
@@ -52,10 +52,10 @@ public:
     }
 
     void start(PlayLayer* pl, float duration) {
-        m_playLayer = pl ? pl : findCurrentPlayLayer();
+        m_playLayer = pl ? pl : curPL();
         m_timeRemaining = duration;
         m_isRestored = false;
-        applyPitch(kTargetPitch);
+        applyPitch(pitchDown);
         scheduleUpdate();
     }
 
@@ -65,11 +65,11 @@ public:
             return;
         }
 
-        if (auto current = findCurrentPlayLayer()) {
+        if (auto current = curPL()) {
             m_playLayer = current;
         }
 
-        applyPitch(kTargetPitch);
+        applyPitch(pitchDown);
 
         if (!m_playLayer || !m_playLayer->isGameplayActive()) {
             return;
@@ -85,7 +85,7 @@ public:
         if (m_isRestored) return;
         m_isRestored = true;
         unscheduleUpdate();
-        applyPitch(kDefaultPitch);
+        applyPitch(basePitch);
     }
 
     void restoreAndDelete() {
@@ -99,21 +99,21 @@ public:
     }
 };
 
-static void applyLowPitch(PlayLayer* pl, float duration) {
+static void doLowPitch(PlayLayer* pl, float duration) {
     auto sc = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!sc) return;
 
-    if (auto existing = sc->getChildByTag(kLowPitchControllerTag)) {
-        if (auto ctrl = typeinfo_cast<LowPitchController*>(existing)) {
+    if (auto existing = sc->getChildByTag(pitchTag)) {
+        if (auto ctrl = typeinfo_cast<PitchDownCtrl*>(existing)) {
             ctrl->start(pl, duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
 
-    auto ctrl = LowPitchController::create(pl);
+    auto ctrl = PitchDownCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kLowPitchControllerTag);
+    ctrl->setTag(pitchTag);
     sc->addChild(ctrl, 999999);
     ctrl->start(pl, duration);
 }
@@ -122,9 +122,9 @@ void registerLowPitch(EventRegistry& reg) {
     reg.add(EventDef(
         "low-pitch",
         "Low Pitch",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            applyLowPitch(pl, kEventDuration);
+            doLowPitch(pl, dur);
         }
     ));
 }

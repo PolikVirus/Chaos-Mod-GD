@@ -16,8 +16,8 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 10.f;
-static constexpr int kControllerTag = 0x5348414B; // 'SHAK'
+static constexpr float dur = 10.f;
+static constexpr int shakeTag = 0x5348414B;
 
 static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
@@ -53,19 +53,19 @@ static bool isPauseMenuOpen(PlayLayer* pl) {
     return !pl->isGameplayActive();
 }
 
-class ShakeController : public cocos2d::CCNode {
+class ShakeCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
-    float m_totalTime = kEventDuration;
-    float m_timeLeft = kEventDuration;
+    float m_totalTime = dur;
+    float m_timeLeft = dur;
     float m_strength = 14.f;
     cocos2d::CCPoint m_previousOffset = cocos2d::CCPoint(0.f, 0.f);
     bool m_restored = false;
     bool m_wasPaused = false;
 
-    static ShakeController* create(PlayLayer* pl) {
+    static ShakeCtrl* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto c = new ShakeController();
+        auto c = new ShakeCtrl();
         c->m_playLayer = pl;
         c->autorelease();
         return c;
@@ -143,17 +143,17 @@ static void runShakeEffect(PlayLayer* pl, float duration) {
     if (!pl) return;
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
-    if (auto existing = scene->getChildByTag(kControllerTag)) {
-        if (auto ctrl = typeinfo_cast<ShakeController*>(existing)) {
+    if (auto existing = scene->getChildByTag(shakeTag)) {
+        if (auto ctrl = typeinfo_cast<ShakeCtrl*>(existing)) {
             ctrl->m_playLayer = pl;
             ctrl->start(duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-    auto ctrl = ShakeController::create(pl);
+    auto ctrl = ShakeCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kControllerTag);
+    ctrl->setTag(shakeTag);
     scene->addChild(ctrl, std::numeric_limits<int>::max());
     ctrl->start(duration);
 }
@@ -162,9 +162,9 @@ void registerShakeScreen(EventRegistry& reg) {
     reg.add(EventDef(
         "shake-screen",
         "Shake Screen",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runShakeEffect(pl, kEventDuration);
+            runShakeEffect(pl, dur);
         }
     ));
 }

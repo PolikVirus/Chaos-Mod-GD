@@ -7,11 +7,11 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr char const* kId   = "soggy-jumpscare";
-static constexpr char const* kName = "Soggy Jumpscare";
-static constexpr float kLogDuration = -1.f;
-static constexpr float kShowSeconds    = 1.0f;
-static constexpr float kFadeOutSeconds = 1.0f;
+static constexpr char const* evId   = "soggy-jumpscare";
+static constexpr char const* evName = "Soggy Jumpscare";
+static constexpr float logDur = -1.f;
+static constexpr float showSecs    = 1.0f;
+static constexpr float fadeSecs = 1.0f;
 
 static void startSoggy(PlayLayer* pl) {
     if (!pl) return;
@@ -34,8 +34,8 @@ static void startSoggy(PlayLayer* pl) {
     }
     parent->addChild(spr, 999999);
     spr->runAction(cocos2d::CCSequence::create(
-        cocos2d::CCDelayTime::create(kShowSeconds),
-        cocos2d::CCFadeOut::create(kFadeOutSeconds),
+        cocos2d::CCDelayTime::create(showSecs),
+        cocos2d::CCFadeOut::create(fadeSecs),
         cocos2d::CCRemoveSelf::create(),
         nullptr
     ));
@@ -43,9 +43,9 @@ static void startSoggy(PlayLayer* pl) {
 
 void registerSoggyJumpscare(EventRegistry& reg) {
     reg.add(EventDef(
-        kId,
-        kName,
-        kLogDuration,
+        evId,
+        evName,
+        logDur,
         &startSoggy
     ));
 }

@@ -17,20 +17,20 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 20.f;
-static constexpr int kEffectNodeTag = 0x4452554E; // 'DRUN'
-static constexpr int kOverlayNodeTag = 0x44524F56; // 'DROV'
-static constexpr int kOverlayZ = 1000000000;
+static constexpr float dur = 20.f;
+static constexpr int drunkTag = 0x4452554E;
+static constexpr int overlayTag = 0x44524F56;
+static constexpr int overlayZ = 1000000000;
 
-static float clampf(float v, float lo, float hi) {
+static float clampv(float v, float lo, float hi) {
     return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
-static float lerpf(float a, float b, float t) {
+static float mixf(float a, float b, float t) {
     return a + (b - a) * t;
 }
 
-static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
+static bool isInside(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
     for (auto cur = node; cur; cur = cur->getParent()) {
         if (cur == root) return true;
@@ -39,7 +39,7 @@ static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
 }
 
 #if CHAOS_HAS_PAUSE_LAYER
-static bool containsPauseLayer(cocos2d::CCNode* n) {
+static bool hasPauseLayer(cocos2d::CCNode* n) {
     if (!n) return false;
     auto children = n->getChildren();
     if (!children) return false;
@@ -53,22 +53,22 @@ static bool containsPauseLayer(cocos2d::CCNode* n) {
 }
 #endif
 
-static bool isPausedLike(PlayLayer* pl) {
+static bool pausedNow(PlayLayer* pl) {
     if (!pl) return false;
 
 #if CHAOS_HAS_PAUSE_LAYER
-    if (pl->m_uiLayer && containsPauseLayer(pl->m_uiLayer)) return true;
-    if (containsPauseLayer(pl)) return true;
+    if (pl->m_uiLayer && hasPauseLayer(pl->m_uiLayer)) return true;
+    if (hasPauseLayer(pl)) return true;
 
     if (auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene()) {
-        if (containsPauseLayer(scene)) return true;
+        if (hasPauseLayer(scene)) return true;
     }
 #endif
 
     return !pl->isGameplayActive();
 }
 
-static cocos2d::ccColor3B hsv_to_rgb(float h, float s, float v) {
+static cocos2d::ccColor3B hsvRgb(float h, float s, float v) {
     h = std::fmod(h, 360.f);
     if (h < 0.f) h += 360.f;
 
@@ -94,12 +94,12 @@ static cocos2d::ccColor3B hsv_to_rgb(float h, float s, float v) {
     return cocos2d::ccc3(to255(r + m), to255(g + m), to255(b + m));
 }
 
-class DrunkEffectNode : public cocos2d::CCNode {
+class DrunkThing : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
 
-    float m_duration = kEventDuration;
-    float m_timeLeft = kEventDuration;
+    float m_duration = dur;
+    float m_timeLeft = dur;
 
     float m_elapsed = 0.f;
 
@@ -118,9 +118,9 @@ public:
     bool m_finished = false;
     bool m_wasPaused = false;
 
-    static DrunkEffectNode* create(PlayLayer* pl) {
+    static DrunkThing* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto ret = new DrunkEffectNode();
+        auto ret = new DrunkThing();
         ret->m_playLayer = pl;
         ret->autorelease();
         return ret;
@@ -176,22 +176,22 @@ public:
         auto sc = getScene();
         if (!sc) return nullptr;
 
-        auto ov = typeinfo_cast<cocos2d::CCLayerColor*>(sc->getChildByTag(kOverlayNodeTag));
+        auto ov = typeinfo_cast<cocos2d::CCLayerColor*>(sc->getChildByTag(overlayTag));
         if (!ov) {
             ov = cocos2d::CCLayerColor::create(cocos2d::ccc4(255, 255, 255, 120));
             if (!ov) return nullptr;
 
-            ov->setTag(kOverlayNodeTag);
+            ov->setTag(overlayTag);
             ov->setAnchorPoint({0.f, 0.f});
             ov->setPosition({0.f, 0.f});
             ov->setBlendFunc(ccBlendFunc{GL_SRC_ALPHA, GL_ONE});
 
-            sc->addChild(ov, kOverlayZ);
+            sc->addChild(ov, overlayZ);
         }
 
         auto ws = cocos2d::CCDirector::sharedDirector()->getWinSize();
         ov->setContentSize(ws);
-        ov->setZOrder(kOverlayZ);
+        ov->setZOrder(overlayZ);
         return ov;
     }
 
@@ -205,10 +205,10 @@ public:
             m_noiseTarget = cocos2d::CCPoint(nx * amp, ny * amp);
         }
 
-        float follow = clampf(dt * 3.8f, 0.f, 1.f);
+        float follow = clampv(dt * 3.8f, 0.f, 1.f);
         m_noisePos = cocos2d::CCPoint(
-            lerpf(m_noisePos.x, m_noiseTarget.x, follow),
-            lerpf(m_noisePos.y, m_noiseTarget.y, follow)
+            mixf(m_noisePos.x, m_noiseTarget.x, follow),
+            mixf(m_noisePos.y, m_noiseTarget.y, follow)
         );
     }
 
@@ -277,7 +277,7 @@ public:
     void updateOverlay(cocos2d::CCLayerColor* ov) {
         if (!ov) return;
         float hue = std::fmod(m_elapsed * 160.f, 360.f);
-        auto col = hsv_to_rgb(hue, 1.0f, 1.0f);
+        auto col = hsvRgb(hue, 1.0f, 1.0f);
         float pulse = 0.5f + 0.5f * std::sinf(m_elapsed * 1.6f);
         unsigned char alpha = static_cast<unsigned char>(90 + pulse * 110);
         ov->setColor(col);
@@ -312,12 +312,12 @@ public:
             finishAndCleanup();
             return;
         }
-        if (!isDescendant(sc, m_playLayer)) {
+        if (!isInside(sc, m_playLayer)) {
             finishAndCleanup();
             return;
         }
         auto ov = overlay();
-        bool paused = isPausedLike(m_playLayer);
+        bool paused = pausedNow(m_playLayer);
         if (paused) {
             if (!m_wasPaused) {
                 resetToBase();
@@ -349,7 +349,7 @@ public:
         this->unscheduleUpdate();
         if (m_playLayer) resetToBase();
         if (auto sc = getScene()) {
-            if (auto ov = sc->getChildByTag(kOverlayNodeTag)) {
+            if (auto ov = sc->getChildByTag(overlayTag)) {
                 ov->removeFromParentAndCleanup(true);
             }
         }
@@ -370,17 +370,17 @@ static void startDrunk(PlayLayer* pl, float seconds) {
     if (!pl) return;
     auto sc = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!sc) return;
-    if (auto existing = sc->getChildByTag(kEffectNodeTag)) {
-        if (auto fx = typeinfo_cast<DrunkEffectNode*>(existing)) {
+    if (auto existing = sc->getChildByTag(drunkTag)) {
+        if (auto fx = typeinfo_cast<DrunkThing*>(existing)) {
             fx->m_playLayer = pl;
             fx->start(seconds);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-    auto fx = DrunkEffectNode::create(pl);
+    auto fx = DrunkThing::create(pl);
     if (!fx) return;
-    fx->setTag(kEffectNodeTag);
+    fx->setTag(drunkTag);
     sc->addChild(fx, std::numeric_limits<int>::max());
     fx->start(seconds);
 }
@@ -389,9 +389,9 @@ void registerDrunkMode(EventRegistry& reg) {
     reg.add(EventDef(
         "drunk-mode",
         "Drunk Mode",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            startDrunk(pl, kEventDuration);
+            startDrunk(pl, dur);
         }
     ));
 }

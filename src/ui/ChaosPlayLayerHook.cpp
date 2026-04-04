@@ -28,7 +28,6 @@ static chaosmod::EventDef const* findEventById(std::string const& id) {
     return nullptr;
 }
 
-// debug
 static bool isForceEnabled() {
     auto mod = Mod::get();
     if (!mod || !mod->hasSetting("force-event")) return false;
@@ -90,10 +89,8 @@ class $modify(ChaosBarPlayLayer, PlayLayer) {
         if (!this->isGameplayActive()) return;
         if (!m_fields->m_isUIInitialized) return;
 
-        // Keep log positioned correctly (text-only log)
         m_fields->m_eventLog.update(dt);
 
-        // Bottom bar ticks; when true -> fire event NOW
         if (m_fields->m_timerBar.update(dt)) {
             if (auto ev = pickEvent()) {
                 m_fields->m_eventLog.add(ev->name, ev->duration);

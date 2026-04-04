@@ -8,10 +8,10 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 30.f;
-static constexpr int kFPS20ControllerTag = 0x46503230; // 'FP20'
+static constexpr float dur = 30.f;
+static constexpr int fpsTag = 0x46503230;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -20,30 +20,30 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
-static bool nearlyEqual(double a, double b) {
+static bool sameish(double a, double b) {
     return std::fabs(a - b) <= 0.0001;
 }
 
-class FPS20Controller : public cocos2d::CCNode {
+class FpsCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
-    float m_timeLeft = kEventDuration;
+    float m_timeLeft = dur;
     bool m_restored = false;
     double m_originalInterval = 0.0;
     bool m_hasOriginalInterval = false;
 
-    static FPS20Controller* create(PlayLayer* pl) {
-        auto c = new FPS20Controller();
+    static FpsCtrl* create(PlayLayer* pl) {
+        auto c = new FpsCtrl();
         if (!c) return nullptr;
         c->m_playLayer = pl;
         c->autorelease();
@@ -57,7 +57,7 @@ public:
     }
 
     void start(PlayLayer* pl, float duration) {
-        m_playLayer = pl ? pl : findCurrentPlayLayer();
+        m_playLayer = pl ? pl : curPL();
         m_timeLeft = duration;
         m_restored = false;
 
@@ -78,7 +78,7 @@ public:
             return;
         }
 
-        if (auto current = findCurrentPlayLayer()) {
+        if (auto current = curPL()) {
             m_playLayer = current;
         }
 
@@ -88,7 +88,7 @@ public:
             return;
         }
 
-        if (!nearlyEqual(director->getAnimationInterval(), 1.0 / 20.0)) {
+        if (!sameish(director->getAnimationInterval(), 1.0 / 20.0)) {
             applyFPS();
         }
 
@@ -123,32 +123,32 @@ public:
     }
 };
 
-static void runFPS20Effect(PlayLayer* pl) {
+static void run20Fps(PlayLayer* pl) {
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
 
-    if (auto existing = scene->getChildByTag(kFPS20ControllerTag)) {
-        if (auto ctrl = typeinfo_cast<FPS20Controller*>(existing)) {
-            ctrl->start(pl, kEventDuration);
+    if (auto existing = scene->getChildByTag(fpsTag)) {
+        if (auto ctrl = typeinfo_cast<FpsCtrl*>(existing)) {
+            ctrl->start(pl, dur);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
 
-    auto ctrl = FPS20Controller::create(pl);
+    auto ctrl = FpsCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kFPS20ControllerTag);
+    ctrl->setTag(fpsTag);
     scene->addChild(ctrl, 999999);
-    ctrl->start(pl, kEventDuration);
+    ctrl->start(pl, dur);
 }
 
 void registerFPS20Event(EventRegistry& reg) {
     reg.add(EventDef(
         "fps-20",
         "20 FPS",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runFPS20Effect(pl);
+            run20Fps(pl);
         }
     ));
 }

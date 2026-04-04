@@ -33,7 +33,6 @@ void SegmentBarWidget::setProgress(float progress) {
 
     progress = std::clamp(progress, 0.f, 1.f);
 
-    // fallback
     if (solidFill) {
         float w = fillW * progress;
         if (w < 0.f) w = 0.f;
@@ -82,9 +81,9 @@ cocos2d::CCSprite* loadFileSprite(char const* base) {
         hd.insert(dot, "-hd");
         uhd.insert(dot, "-uhd");
     } else {
-        // @geode-ignore(unknown-resource)
+
         hd += "-hd.png";
-        // @geode-ignore(unknown-resource)
+
         uhd += "-uhd.png";
     }
 
@@ -99,7 +98,7 @@ cocos2d::CCSprite* loadFileSprite(char const* base) {
     return nullptr;
 }
 
-static void enableSolidFallback(SegmentBarWidget& out) {
+static void useSolidFill(SegmentBarWidget& out) {
     auto col = cocos2d::ccc4(255, 220, 0, 255);
 
     out.solidFill = cocos2d::CCLayerColor::create(col, out.fillW, out.fillH);
@@ -145,7 +144,7 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
         segProto->getContentSize().width <= 1.f ||
         segProto->getContentSize().height <= 1.f) {
         geode::log::warn("[Chaos Mod] sliderBar.png missing/unusable -> fallback");
-        enableSolidFallback(out);
+        useSolidFill(out);
         out.setProgress(1.f);
         return out;
     }
@@ -171,7 +170,7 @@ SegmentBarWidget createSegmentBar(cocos2d::CCNode* parent, float scale, float in
 
     if (out.segments.empty()) {
         geode::log::warn("[Chaos Mod] sliderBar.png loaded but segments creation failed -> fallback");
-        enableSolidFallback(out);
+        useSolidFill(out);
     }
 
     out.setProgress(1.f);
