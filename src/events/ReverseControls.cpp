@@ -10,8 +10,8 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 20.f;
-static constexpr int kControllerTag = 0x52564354; // 'RVCT'
+static constexpr float dur = 20.f;
+static constexpr int revTag = 0x52564354;
 
 struct RevState {
     bool active = false;
@@ -21,7 +21,7 @@ struct RevState {
 };
 static RevState gRev;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -30,14 +30,14 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
 static bool isJumpHeld(PlayerObject* p) {
@@ -54,7 +54,7 @@ static bool normalizePlayer1(PlayLayer* pl, bool isPlayer1) {
     return isPlayer1;
 }
 
-static void syncMovement(PlayLayer* pl) {
+static void syncRev(PlayLayer* pl) {
     if (!pl || !gRev.active || gRev.owner != pl) return;
 
     auto p1 = pl->m_player1;
@@ -85,7 +85,7 @@ static void syncMovement(PlayLayer* pl) {
     gRev.active = wasActive;
 }
 
-static void clearReverseState() {
+static void clearRev() {
     gRev.active = false;
     gRev.owner = nullptr;
     gRev.jump1 = gRev.left1 = gRev.right1 = false;
@@ -131,7 +131,7 @@ static void setActive(PlayLayer* pl, bool enable) {
     bool left2 = gRev.left2;
     bool right2 = gRev.right2;
 
-    clearReverseState();
+    clearRev();
 
     if (!hadOwner) return;
 
@@ -145,7 +145,7 @@ static void setActive(PlayLayer* pl, bool enable) {
     }
 }
 
-class $modify(ReverseControlsInputHook, GJBaseGameLayer) {
+class $modify(RevInputHook, GJBaseGameLayer) {
     void handleButton(bool down, int button, bool isPlayer1) {
         auto pl = typeinfo_cast<PlayLayer*>(this);
         if (!pl || !gRev.active || gRev.owner != pl) {
@@ -179,18 +179,18 @@ class $modify(ReverseControlsInputHook, GJBaseGameLayer) {
     }
 };
 
-static bool isPausedLike(PlayLayer* pl) {
+static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
 
-class ReverseControlsController : public cocos2d::CCNode {
+class RevCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
     bool m_stopped = false;
     float m_timeRemaining = 0.f;
 
-    static ReverseControlsController* create(PlayLayer* pl) {
-        auto ctrl = new ReverseControlsController();
+    static RevCtrl* create(PlayLayer* pl) {
+        auto ctrl = new RevCtrl();
         if (!ctrl) return nullptr;
         ctrl->m_playLayer = pl;
         ctrl->autorelease();
@@ -208,13 +208,13 @@ public:
     void start(PlayLayer* pl, float duration) {
         m_stopped = false;
         m_timeRemaining = duration;
-        bindToPlayLayer(pl ? pl : findCurrentPlayLayer());
-        syncMovement(m_playLayer);
+        bindToPlayLayer(pl ? pl : curPL());
+        syncRev(m_playLayer);
         scheduleUpdate();
     }
 
     void update(float dt) override {
-        auto current = findCurrentPlayLayer();
+        auto current = curPL();
         if (current) {
             bindToPlayLayer(current);
         }
@@ -224,9 +224,9 @@ public:
             return;
         }
 
-        syncMovement(m_playLayer);
+        syncRev(m_playLayer);
 
-        if (isPausedLike(m_playLayer)) {
+        if (pausedNow(m_playLayer)) {
             return;
         }
 
@@ -240,11 +240,11 @@ public:
         if (m_stopped) return;
         m_stopped = true;
 
-        auto current = findCurrentPlayLayer();
+        auto current = curPL();
         if (current && m_playLayer == current && gRev.owner == m_playLayer) {
             setActive(m_playLayer, false);
         } else {
-            clearReverseState();
+            clearRev();
         }
 
         unscheduleUpdate();
@@ -253,7 +253,7 @@ public:
 
     void onExit() override {
         if (!m_stopped) {
-            clearReverseState();
+            clearRev();
         }
         unscheduleUpdate();
         cocos2d::CCNode::onExit();
@@ -264,24 +264,24 @@ void registerReverseControls(EventRegistry& reg) {
     reg.add(EventDef(
         "reverse-controls",
         "Reverse Controls",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
             auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
             if (!scene) return;
 
-            if (auto existing = scene->getChildByTag(kControllerTag)) {
-                if (auto ctrl = typeinfo_cast<ReverseControlsController*>(existing)) {
-                    ctrl->start(pl, kEventDuration);
+            if (auto existing = scene->getChildByTag(revTag)) {
+                if (auto ctrl = typeinfo_cast<RevCtrl*>(existing)) {
+                    ctrl->start(pl, dur);
                     return;
                 }
                 existing->removeFromParentAndCleanup(true);
             }
 
-            auto ctrl = ReverseControlsController::create(pl);
+            auto ctrl = RevCtrl::create(pl);
             if (!ctrl) return;
-            ctrl->setTag(kControllerTag);
+            ctrl->setTag(revTag);
             scene->addChild(ctrl, 999999);
-            ctrl->start(pl, kEventDuration);
+            ctrl->start(pl, dur);
         }
     ));
 }

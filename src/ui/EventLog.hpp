@@ -1,4 +1,4 @@
-// kinda vibecoded :(
+
 #ifndef CHAOSUI_EVENTLOG_HPP
 #define CHAOSUI_EVENTLOG_HPP
 
@@ -13,10 +13,6 @@ namespace cocos2d {
 
 namespace chaosui {
 
-// durationSeconds:
-//   > 0  => countdown shown, expires at 0
-//   == 0 => countdown shown, uses 10s fallback (legacy)
-//   < 0  => NO countdown shown, still expires after 10s fallback
 class EventLog {
 public:
     void init(cocos2d::CCNode* parent);
@@ -28,8 +24,8 @@ public:
 private:
     struct Line {
         std::string name;
-        float timeLeft = 0.f;   // counts down to 0
-        bool showTimer = true;  // if false, render name only
+        float timeLeft = 0.f;
+        bool showTimer = true;
     };
 
     struct Slot {
@@ -42,10 +38,10 @@ private:
     void refreshText();
 
     cocos2d::CCNode* m_root = nullptr;
-    std::deque<Line> m_lines;   // newest first
+    std::deque<Line> m_lines;
     std::vector<Slot> m_slots;
 };
 
 } // namespace chaosui
 
-#endif // CHAOSUI_EVENTLOG_HPP
+#endif

@@ -26,4 +26,4 @@ namespace chaosmod {
     };
 
     void registerAllEvents(EventRegistry& reg);
-}
+} // namespace chaosmod

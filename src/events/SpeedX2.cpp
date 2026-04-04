@@ -9,10 +9,10 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 10.f;
-static constexpr int kSpeedControllerTag = 0x53504544; // 'SPED'
+static constexpr float dur = 10.f;
+static constexpr int speedTag = 0x53504544;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -21,25 +21,25 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
-static bool isPausedLike(PlayLayer* pl) {
+static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
 
-static bool nearlyEqual(float a, float b) {
+static bool sameish(float a, float b) {
     return std::fabs(a - b) <= 0.0001f;
 }
 
-class SpeedController : public cocos2d::CCNode {
+class SpeedThing : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
     float m_factor = 1.f;
@@ -51,8 +51,8 @@ public:
     bool m_wasPaused = false;
     std::chrono::steady_clock::time_point m_lastTick;
 
-    static SpeedController* create(PlayLayer* pl) {
-        auto ctrl = new SpeedController();
+    static SpeedThing* create(PlayLayer* pl) {
+        auto ctrl = new SpeedThing();
         if (!ctrl) return nullptr;
         ctrl->m_playLayer = pl;
         ctrl->autorelease();
@@ -60,7 +60,7 @@ public:
     }
 
     void refreshPlayLayer() {
-        if (auto current = findCurrentPlayLayer()) {
+        if (auto current = curPL()) {
             m_playLayer = current;
         }
     }
@@ -72,7 +72,7 @@ public:
     }
 
     void start(PlayLayer* pl, float factor, float duration) {
-        m_playLayer = pl ? pl : findCurrentPlayLayer();
+        m_playLayer = pl ? pl : curPL();
         m_factor = factor;
         m_duration = duration;
         m_elapsed = 0.f;
@@ -100,7 +100,7 @@ public:
         refreshPlayLayer();
 
         auto now = std::chrono::steady_clock::now();
-        bool paused = !m_playLayer || isPausedLike(m_playLayer);
+        bool paused = !m_playLayer || pausedNow(m_playLayer);
 
         if (m_wasPaused && !paused) {
             applyFactor();
@@ -109,7 +109,7 @@ public:
         auto sched = cocos2d::CCDirector::sharedDirector()->getScheduler();
         if (sched && m_hasOriginalTimeScale) {
             float wanted = m_originalTimeScale * m_factor;
-            if (!nearlyEqual(sched->getTimeScale(), wanted)) {
+            if (!sameish(sched->getTimeScale(), wanted)) {
                 sched->setTimeScale(wanted);
             }
         }
@@ -150,22 +150,22 @@ public:
     }
 };
 
-static void changePlaySpeed(PlayLayer* pl, float factor, float duration) {
+static void setSpeed(PlayLayer* pl, float factor, float duration) {
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
 
-    if (auto existing = scene->getChildByTag(kSpeedControllerTag)) {
-        if (auto ctrl = typeinfo_cast<SpeedController*>(existing)) {
+    if (auto existing = scene->getChildByTag(speedTag)) {
+        if (auto ctrl = typeinfo_cast<SpeedThing*>(existing)) {
             ctrl->start(pl, factor, duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
 
-    auto ctrl = SpeedController::create(pl);
+    auto ctrl = SpeedThing::create(pl);
     if (!ctrl) return;
 
-    ctrl->setTag(kSpeedControllerTag);
+    ctrl->setTag(speedTag);
     scene->addChild(ctrl, 999999);
     ctrl->start(pl, factor, duration);
 }
@@ -174,9 +174,9 @@ void registerSpeedX2(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x2",
         "Speed x2",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            changePlaySpeed(pl, 2.f, kEventDuration);
+            setSpeed(pl, 2.f, dur);
         }
     ));
 }
@@ -185,9 +185,9 @@ void registerSpeedX1_5(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x1-5",
         "Speed x1.5",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            changePlaySpeed(pl, 1.5f, kEventDuration);
+            setSpeed(pl, 1.5f, dur);
         }
     ));
 }
@@ -196,9 +196,9 @@ void registerSpeedX0_5(EventRegistry& reg) {
     reg.add(EventDef(
         "speed-x0-5",
         "Speed x0.5",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            changePlaySpeed(pl, 0.5f, kEventDuration);
+            setSpeed(pl, 0.5f, dur);
         }
     ));
 }

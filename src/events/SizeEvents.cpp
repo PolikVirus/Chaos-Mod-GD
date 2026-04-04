@@ -14,7 +14,7 @@ static void setPlayerSizeOnce(PlayLayer* pl, bool mini) {
     if (pl->m_player2) pl->m_player2->togglePlayerScale(mini, false);
 }
 
-void registerForceMiniMode(EventRegistry& reg) {
+void registerMini(EventRegistry& reg) {
     reg.add(EventDef(
         "size-mini",
         "Mini Mode",
@@ -24,6 +24,5 @@ void registerForceMiniMode(EventRegistry& reg) {
         }
     ));
 }
-
 
 } // namespace chaosmod

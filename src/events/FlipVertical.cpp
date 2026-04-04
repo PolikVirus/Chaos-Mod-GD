@@ -16,8 +16,8 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 10.f;
-static constexpr int kControllerTag = 0x464C5056; // 'FLPV'
+static constexpr float dur = 10.f;
+static constexpr int flipTag = 0x464C5056;
 
 static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
@@ -53,19 +53,19 @@ static bool isPauseMenuOpen(PlayLayer* pl) {
     return !pl->isGameplayActive();
 }
 
-class FlipVerticalController : public cocos2d::CCNode {
+class FlipVCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
-    float m_timeLeft = kEventDuration;
+    float m_timeLeft = dur;
     cocos2d::CCPoint m_originalPosition;
     float m_originalScaleX;
     float m_originalScaleY;
     bool m_restored = false;
     bool m_wasPaused = false;
 
-    static FlipVerticalController* create(PlayLayer* pl) {
+    static FlipVCtrl* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto c = new FlipVerticalController();
+        auto c = new FlipVCtrl();
         c->m_playLayer = pl;
         c->autorelease();
         return c;
@@ -81,11 +81,11 @@ public:
         m_originalPosition = m_playLayer->getPosition();
         m_originalScaleX = m_playLayer->getScaleX();
         m_originalScaleY = m_playLayer->getScaleY();
-        // Set anchor point to center for proper flipping
+
         m_playLayer->setAnchorPoint({0.5f, 0.5f});
-        // Flip vertically
+
         m_playLayer->setScaleY(-m_originalScaleY);
-        // No position adjustment needed with centered anchor point
+
         scheduleUpdate();
     }
 
@@ -113,7 +113,7 @@ public:
             m_playLayer->setScaleX(m_originalScaleX);
             m_playLayer->setScaleY(m_originalScaleY);
             m_playLayer->setPosition(m_originalPosition);
-            // Restore anchor point to default (0.5, 0.5) or whatever it was
+
             m_playLayer->setAnchorPoint({0.5f, 0.5f});
         }
     }
@@ -133,17 +133,17 @@ static void runFlipVerticalEffect(PlayLayer* pl, float duration) {
     if (!pl) return;
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
-    if (auto existing = scene->getChildByTag(kControllerTag)) {
-        if (auto ctrl = typeinfo_cast<FlipVerticalController*>(existing)) {
+    if (auto existing = scene->getChildByTag(flipTag)) {
+        if (auto ctrl = typeinfo_cast<FlipVCtrl*>(existing)) {
             ctrl->m_playLayer = pl;
             ctrl->start(duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-    auto ctrl = FlipVerticalController::create(pl);
+    auto ctrl = FlipVCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kControllerTag);
+    ctrl->setTag(flipTag);
     scene->addChild(ctrl, std::numeric_limits<int>::max());
     ctrl->start(duration);
 }
@@ -152,9 +152,9 @@ void registerFlipVertical(EventRegistry& reg) {
     reg.add(EventDef(
         "flip-vertical",
         "Flip Screen Vertically",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runFlipVerticalEffect(pl, kEventDuration);
+            runFlipVerticalEffect(pl, dur);
         }
     ));
 }

@@ -16,8 +16,8 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 20.f;
-static constexpr int kSnowControllerTag = 0x534E4F57; // 'SNOW'
+static constexpr float dur = 20.f;
+static constexpr int snowTag = 0x534E4F57;
 
 static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
@@ -53,18 +53,18 @@ static bool isPauseMenuOpen(PlayLayer* pl) {
     return !pl->isGameplayActive();
 }
 
-class SnowController : public cocos2d::CCNode {
+class SnowCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
     cocos2d::CCParticleSystemQuad* m_snowParticles = nullptr;
-    float m_timeLeft = kEventDuration;
+    float m_timeLeft = dur;
     bool m_restored = false;
     bool m_wasPaused = false;
     float m_originalEmissionRate = 80.f;
 
-    static SnowController* create(PlayLayer* pl) {
+    static SnowCtrl* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto c = new SnowController();
+        auto c = new SnowCtrl();
         c->m_playLayer = pl;
         c->autorelease();
         return c;
@@ -76,7 +76,7 @@ public:
 
     void start() {
         if (!m_playLayer) return;
-        m_timeLeft = kEventDuration;
+        m_timeLeft = dur;
         auto currentScene = scene();
         if (!currentScene) return;
 
@@ -89,7 +89,7 @@ public:
             m_snowParticles->setLifeVar(4.f);
             m_snowParticles->setSpeed(80.f);
             m_snowParticles->setSpeedVar(30.f);
-            m_snowParticles->setEmissionRate(m_originalEmissionRate); 
+            m_snowParticles->setEmissionRate(m_originalEmissionRate);
             currentScene->addChild(m_snowParticles, std::numeric_limits<int>::max());
         }
 
@@ -101,20 +101,20 @@ public:
         auto currentScene = scene();
         if (!currentScene || !m_playLayer) { restoreAndDelete(); return; }
         if (!isDescendant(currentScene, m_playLayer)) { restoreAndDelete(); return; }
-        
+
         bool paused = isPauseMenuOpen(m_playLayer);
         if (paused) {
-            if (!m_wasPaused && m_snowParticles) { 
-                m_snowParticles->setEmissionRate(0.f); 
-                m_wasPaused = true; 
+            if (!m_wasPaused && m_snowParticles) {
+                m_snowParticles->setEmissionRate(0.f);
+                m_wasPaused = true;
             }
             return;
         }
-        if (m_wasPaused && m_snowParticles) { 
-            m_snowParticles->setEmissionRate(m_originalEmissionRate); 
-            m_wasPaused = false; 
+        if (m_wasPaused && m_snowParticles) {
+            m_snowParticles->setEmissionRate(m_originalEmissionRate);
+            m_wasPaused = false;
         }
-        
+
         m_timeLeft -= dt;
         if (m_timeLeft <= 0.f) { restoreAndDelete(); return; }
     }
@@ -145,17 +145,17 @@ static void runSnowEffect(PlayLayer* pl) {
     if (!pl) return;
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
-    if (auto existing = scene->getChildByTag(kSnowControllerTag)) {
-        if (auto ctrl = typeinfo_cast<SnowController*>(existing)) {
+    if (auto existing = scene->getChildByTag(snowTag)) {
+        if (auto ctrl = typeinfo_cast<SnowCtrl*>(existing)) {
             ctrl->m_playLayer = pl;
             ctrl->start();
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-    auto ctrl = SnowController::create(pl);
+    auto ctrl = SnowCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kSnowControllerTag);
+    ctrl->setTag(snowTag);
     scene->addChild(ctrl, std::numeric_limits<int>::max());
     ctrl->start();
 }
@@ -164,7 +164,7 @@ void registerSnowEvent(EventRegistry& reg) {
     reg.add(EventDef(
         "snow-screen",
         "Snow Screen",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
             runSnowEffect(pl);
         }

@@ -16,8 +16,8 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 10.f;
-static constexpr int kControllerTag = 0x464C5048; // 'FLPH'
+static constexpr float dur = 10.f;
+static constexpr int flipTag = 0x464C5048;
 
 static bool isDescendant(cocos2d::CCNode* root, cocos2d::CCNode* node) {
     if (!root || !node) return false;
@@ -53,19 +53,19 @@ static bool isPauseMenuOpen(PlayLayer* pl) {
     return !pl->isGameplayActive();
 }
 
-class FlipHorizontalController : public cocos2d::CCNode {
+class FlipHCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
-    float m_timeLeft = kEventDuration;
+    float m_timeLeft = dur;
     cocos2d::CCPoint m_originalPosition;
     float m_originalScaleX;
     float m_originalScaleY;
     bool m_restored = false;
     bool m_wasPaused = false;
 
-    static FlipHorizontalController* create(PlayLayer* pl) {
+    static FlipHCtrl* create(PlayLayer* pl) {
         if (!pl) return nullptr;
-        auto c = new FlipHorizontalController();
+        auto c = new FlipHCtrl();
         c->m_playLayer = pl;
         c->autorelease();
         return c;
@@ -81,11 +81,11 @@ public:
         m_originalPosition = m_playLayer->getPosition();
         m_originalScaleX = m_playLayer->getScaleX();
         m_originalScaleY = m_playLayer->getScaleY();
-        // Set anchor point to center for proper flipping
+
         m_playLayer->setAnchorPoint({0.5f, 0.5f});
-        // Flip horizontally
+
         m_playLayer->setScaleX(-m_originalScaleX);
-        // No position adjustment needed with centered anchor point
+
         scheduleUpdate();
     }
 
@@ -113,7 +113,7 @@ public:
             m_playLayer->setScaleX(m_originalScaleX);
             m_playLayer->setScaleY(m_originalScaleY);
             m_playLayer->setPosition(m_originalPosition);
-            // Restore anchor point to default (0.5, 0.5) or whatever it was
+
             m_playLayer->setAnchorPoint({0.5f, 0.5f});
         }
     }
@@ -133,17 +133,17 @@ static void runFlipHorizontalEffect(PlayLayer* pl, float duration) {
     if (!pl) return;
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
-    if (auto existing = scene->getChildByTag(kControllerTag)) {
-        if (auto ctrl = typeinfo_cast<FlipHorizontalController*>(existing)) {
+    if (auto existing = scene->getChildByTag(flipTag)) {
+        if (auto ctrl = typeinfo_cast<FlipHCtrl*>(existing)) {
             ctrl->m_playLayer = pl;
             ctrl->start(duration);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
-    auto ctrl = FlipHorizontalController::create(pl);
+    auto ctrl = FlipHCtrl::create(pl);
     if (!ctrl) return;
-    ctrl->setTag(kControllerTag);
+    ctrl->setTag(flipTag);
     scene->addChild(ctrl, std::numeric_limits<int>::max());
     ctrl->start(duration);
 }
@@ -152,9 +152,9 @@ void registerFlipHorizontal(EventRegistry& reg) {
     reg.add(EventDef(
         "flip-horizontal",
         "Flip Screen Horizontally",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runFlipHorizontalEffect(pl, kEventDuration);
+            runFlipHorizontalEffect(pl, dur);
         }
     ));
 }

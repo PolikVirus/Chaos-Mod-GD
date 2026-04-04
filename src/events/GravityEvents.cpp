@@ -10,12 +10,12 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr float kEventDuration = 20.f;
-static constexpr float kLowGravityMultiplier = 0.5f;
-static constexpr float kHighGravityMultiplier = 2.0f;
-static constexpr int kGravityTag = 0x47524156; // 'GRAV'
+static constexpr float dur = 20.f;
+static constexpr float lowMul = 0.5f;
+static constexpr float highMul = 2.0f;
+static constexpr int gravTag = 0x47524156;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -24,27 +24,27 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
-static bool isPausedLike(PlayLayer* pl) {
+static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
 
-static bool nearlyEqual(float a, float b) {
+static bool sameish(float a, float b) {
     float diff = std::fabs(a - b);
     float scale = std::fmax(1.f, std::fmax(std::fabs(a), std::fabs(b)));
     return diff <= 1e-4f * scale;
 }
 
-class GravityNode : public cocos2d::CCNode {
+class GravThing : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
     PlayerObject* m_player1 = nullptr;
@@ -57,8 +57,8 @@ public:
     bool m_finished = false;
     bool m_initialized = false;
 
-    static GravityNode* create(PlayLayer* pl) {
-        auto node = new GravityNode();
+    static GravThing* create(PlayLayer* pl) {
+        auto node = new GravThing();
         if (!node) return nullptr;
         node->m_playLayer = pl;
         node->autorelease();
@@ -107,7 +107,7 @@ public:
 
     void start(PlayLayer* pl, float mul, float seconds) {
         bool playLayerChanged = pl && pl != m_playLayer;
-        bindToPlayLayer(pl ? pl : findCurrentPlayLayer(), playLayerChanged || !m_initialized);
+        bindToPlayLayer(pl ? pl : curPL(), playLayerChanged || !m_initialized);
         m_multiplier = mul;
         m_timeRemaining = seconds;
         m_finished = false;
@@ -147,7 +147,7 @@ public:
         if (auto p1 = m_playLayer->m_player1) {
             if (m_player1 && p1 == m_player1) {
                 p1->m_gravityMod = m_player1Base;
-            } else if (nearlyEqual(p1->m_gravityMod, m_player1Base * m_multiplier)) {
+            } else if (sameish(p1->m_gravityMod, m_player1Base * m_multiplier)) {
                 p1->m_gravityMod = m_player1Base;
             }
         }
@@ -155,14 +155,14 @@ public:
         if (auto p2 = m_playLayer->m_player2) {
             if (m_player2 && p2 == m_player2) {
                 p2->m_gravityMod = m_player2Base;
-            } else if (m_hasPlayer2 && nearlyEqual(p2->m_gravityMod, m_player2Base * m_multiplier)) {
+            } else if (m_hasPlayer2 && sameish(p2->m_gravityMod, m_player2Base * m_multiplier)) {
                 p2->m_gravityMod = m_player2Base;
             }
         }
     }
 
     void update(float dt) override {
-        auto current = findCurrentPlayLayer();
+        auto current = curPL();
         if (current && current != m_playLayer) {
             bindToPlayLayer(current, true);
         }
@@ -174,7 +174,7 @@ public:
 
         applyCurrentGravity();
 
-        if (isPausedLike(m_playLayer)) {
+        if (pausedNow(m_playLayer)) {
             return;
         }
 
@@ -203,21 +203,21 @@ public:
     }
 };
 
-static void runGravityEffect(PlayLayer* pl, float mul, float seconds) {
+static void doGravity(PlayLayer* pl, float mul, float seconds) {
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
 
-    if (auto existing = scene->getChildByTag(kGravityTag)) {
-        if (auto node = typeinfo_cast<GravityNode*>(existing)) {
+    if (auto existing = scene->getChildByTag(gravTag)) {
+        if (auto node = typeinfo_cast<GravThing*>(existing)) {
             node->start(pl, mul, seconds);
             return;
         }
         existing->removeFromParentAndCleanup(true);
     }
 
-    auto node = GravityNode::create(pl);
+    auto node = GravThing::create(pl);
     if (!node) return;
-    node->setTag(kGravityTag);
+    node->setTag(gravTag);
     scene->addChild(node, 999999);
     node->start(pl, mul, seconds);
 }
@@ -226,9 +226,9 @@ void registerLowGravity(EventRegistry& reg) {
     reg.add(EventDef(
         "gravity-low",
         "Low Gravity",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runGravityEffect(pl, kLowGravityMultiplier, kEventDuration);
+            doGravity(pl, lowMul, dur);
         }
     ));
 }
@@ -237,9 +237,9 @@ void registerHighGravity(EventRegistry& reg) {
     reg.add(EventDef(
         "gravity-high",
         "High Gravity",
-        kEventDuration,
+        dur,
         [](PlayLayer* pl) {
-            runGravityEffect(pl, kHighGravityMultiplier, kEventDuration);
+            doGravity(pl, highMul, dur);
         }
     ));
 }

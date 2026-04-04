@@ -11,28 +11,28 @@ using namespace geode::prelude;
 
 namespace chaosmod {
 
-static constexpr char const* kId = "jump-delay";
-static constexpr char const* kName = "Jump Delay";
+static constexpr char const* evId = "jump-delay";
+static constexpr char const* evName = "Jump Delay";
 
-static constexpr float kDelaySeconds = 0.3f;
-static constexpr float kEventDuration = 20.f;
+static constexpr float delaySec = 0.3f;
+static constexpr float dur = 20.f;
 
-static constexpr int kControllerTag = 0x4A44454C; // 'JDEL'
+static constexpr int delayTag = 0x4A44454C;
 
-struct QueuedJump {
+struct JumpBuf {
     float timeLeft = 0.f;
     bool down = false;
     int button = 0;
     bool isP1 = true;
 };
 
-struct GlobalJumpState {
+struct DelayState {
     bool active = false;
     bool bypass = false;
     PlayLayer* owner = nullptr;
 } static gJumpDelay;
 
-static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
+static PlayLayer* findPL(cocos2d::CCNode* node) {
     if (!node) return nullptr;
     if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
 
@@ -41,29 +41,29 @@ static PlayLayer* findPlayLayerRecursive(cocos2d::CCNode* node) {
 
     for (auto obj : CCArrayExt(children)) {
         if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPlayLayerRecursive(child)) return pl;
+            if (auto pl = findPL(child)) return pl;
         }
     }
     return nullptr;
 }
 
-static PlayLayer* findCurrentPlayLayer() {
-    return findPlayLayerRecursive(cocos2d::CCDirector::sharedDirector()->getRunningScene());
+static PlayLayer* curPL() {
+    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
 }
 
-static bool isPausedLike(PlayLayer* pl) {
+static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
 
-class JumpDelayController : public cocos2d::CCNode {
+class DelayCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
-    float m_delay = kDelaySeconds;
-    float m_timeRemaining = kEventDuration;
-    std::deque<QueuedJump> m_queue;
+    float m_delay = delaySec;
+    float m_timeRemaining = dur;
+    std::deque<JumpBuf> m_queue;
 
-    static JumpDelayController* create(PlayLayer* pl) {
-        auto ctrl = new JumpDelayController();
+    static DelayCtrl* create(PlayLayer* pl) {
+        auto ctrl = new DelayCtrl();
         if (!ctrl) return nullptr;
         ctrl->m_playLayer = pl;
         ctrl->autorelease();
@@ -84,12 +84,12 @@ public:
     void start(PlayLayer* pl, float delaySeconds, float duration) {
         m_delay = delaySeconds;
         m_timeRemaining = duration;
-        bindToPlayLayer(pl ? pl : findCurrentPlayLayer(), false);
+        bindToPlayLayer(pl ? pl : curPL(), false);
         scheduleUpdate();
     }
 
     void enqueue(bool down, int button, bool isP1) {
-        m_queue.push_back(QueuedJump{m_delay, down, button, isP1});
+        m_queue.push_back(JumpBuf{m_delay, down, button, isP1});
     }
 
     void dispatchNow(bool down, int button, bool isP1) {
@@ -114,7 +114,7 @@ public:
     }
 
     void stopAndDelete() {
-        auto current = findCurrentPlayLayer();
+        auto current = curPL();
         if (current && current == m_playLayer) {
             flushQueue();
         } else {
@@ -126,7 +126,7 @@ public:
     }
 
     void update(float dt) override {
-        auto current = findCurrentPlayLayer();
+        auto current = curPL();
         if (current && current != m_playLayer) {
             bindToPlayLayer(current, true);
         }
@@ -136,7 +136,7 @@ public:
             return;
         }
 
-        if (isPausedLike(m_playLayer)) {
+        if (pausedNow(m_playLayer)) {
             return;
         }
 
@@ -162,7 +162,7 @@ public:
     }
 };
 
-class $modify(JumpDelayInputHook, GJBaseGameLayer) {
+class $modify(DelayInputHook, GJBaseGameLayer) {
     void handleButton(bool down, int button, bool isPlayer1) {
         if (gJumpDelay.bypass) {
             return GJBaseGameLayer::handleButton(down, button, isPlayer1);
@@ -178,8 +178,8 @@ class $modify(JumpDelayInputHook, GJBaseGameLayer) {
         }
 
         auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
-        auto ctrlNode = scene ? scene->getChildByTag(kControllerTag) : nullptr;
-        auto ctrl = ctrlNode ? typeinfo_cast<JumpDelayController*>(ctrlNode) : nullptr;
+        auto ctrlNode = scene ? scene->getChildByTag(delayTag) : nullptr;
+        auto ctrl = ctrlNode ? typeinfo_cast<DelayCtrl*>(ctrlNode) : nullptr;
         if (!ctrl) {
             return GJBaseGameLayer::handleButton(down, button, isPlayer1);
         }
@@ -188,13 +188,13 @@ class $modify(JumpDelayInputHook, GJBaseGameLayer) {
     }
 };
 
-static void enableJumpDelay(PlayLayer* pl, float delaySeconds, float duration) {
+static void runDelay(PlayLayer* pl, float delaySeconds, float duration) {
     auto scene = cocos2d::CCDirector::sharedDirector()->getRunningScene();
     if (!scene) return;
 
-    JumpDelayController* ctrl = nullptr;
-    if (auto existing = scene->getChildByTag(kControllerTag)) {
-        ctrl = typeinfo_cast<JumpDelayController*>(existing);
+    DelayCtrl* ctrl = nullptr;
+    if (auto existing = scene->getChildByTag(delayTag)) {
+        ctrl = typeinfo_cast<DelayCtrl*>(existing);
         if (!ctrl) {
             existing->removeFromParentAndCleanup(true);
             ctrl = nullptr;
@@ -202,9 +202,9 @@ static void enableJumpDelay(PlayLayer* pl, float delaySeconds, float duration) {
     }
 
     if (!ctrl) {
-        ctrl = JumpDelayController::create(pl);
+        ctrl = DelayCtrl::create(pl);
         if (!ctrl) return;
-        ctrl->setTag(kControllerTag);
+        ctrl->setTag(delayTag);
         scene->addChild(ctrl, 999999);
     }
 
@@ -213,11 +213,11 @@ static void enableJumpDelay(PlayLayer* pl, float delaySeconds, float duration) {
 
 void registerJumpDelay(EventRegistry& reg) {
     reg.add(EventDef(
-        kId,
-        kName,
-        kEventDuration,
+        evId,
+        evName,
+        dur,
         [](PlayLayer* pl) {
-            enableJumpDelay(pl, kDelaySeconds, kEventDuration);
+            runDelay(pl, delaySec, dur);
         }
     ));
 }

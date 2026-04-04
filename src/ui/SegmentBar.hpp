@@ -37,4 +37,4 @@ SegmentBarWidget createSegmentBar(
     int zFrame
 );
 
-} // namespace chaosui
+}
