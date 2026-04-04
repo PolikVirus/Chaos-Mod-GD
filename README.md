@@ -31,8 +31,8 @@ Chaos Mod GD v1.0.0 currently has these events:
  * low pitch
  * drunk mode
  * snow screen
- * flip vertical
- * flip horizontal
+~~* flip vertical~~
+~~* flip horizontal~~
  * fps 20
 
 Expect to see more events in future updates!
