@@ -3,14 +3,15 @@
 ---
 
 Made by [Polik](https://gdbrowser.com/u/polikyt)
+<cr>Inspired by [Chaos Mod V](https://github.com/gta-chaos-mod/ChaosModV)</c>
 
 ---
 ## About
 
-Chaos mod GD adds random events every time the timer hits 0. The events vary from jumpscares to speed increases.
+<cg>Chaos mod GD</c> adds random events every time the timer hits 0. The events vary from jumpscares to speed increases.
 You can change the countdown time in the settings.
 
-If you find a bug, use the debug features to understand the bug in detail and report it to me in github issues!
+If you find a bug, use the <cr>debug features</c> to understand the bug in detail and report it to me in github issues!
 
 ## Events
 
