@@ -1,3 +1,9 @@
+# v1.0.2
+ * Removed Drunk mode
+
+# v1.0.1
+Fixed bugs
+
 # v1.0.0
   Release! 
   * speed x0.5

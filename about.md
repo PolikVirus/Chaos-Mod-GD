@@ -14,7 +14,7 @@ If you find a bug, use the <cr>debug features</c> to understand the bug in detai
 
 ## Events
 
-Chaos Mod GD v1.0.1 currently has these events:
+Chaos Mod GD v1.0.2 currently has these events:
  * speed x0.5
  * speed x1.5
  * speed x2
@@ -28,7 +28,6 @@ Chaos Mod GD v1.0.1 currently has these events:
  * shake screen
  * high pitch
  * low pitch
- * drunk mode
  * snow screen
  * fps 20
 

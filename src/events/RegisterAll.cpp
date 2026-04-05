@@ -22,8 +22,6 @@ namespace chaosmod {
     void registerHighPitch(EventRegistry&);
     void registerLowPitch(EventRegistry&);
 
-    void registerDrunkMode(EventRegistry&);
-
     void registerSnowEvent(EventRegistry&);
 
     void registerFPS20Event(EventRegistry&);
@@ -50,7 +48,6 @@ namespace chaosmod {
         registerHighPitch(reg);
         registerLowPitch(reg);
 
-        registerDrunkMode(reg);
 
         registerSnowEvent(reg);
 

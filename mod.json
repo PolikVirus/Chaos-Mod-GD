@@ -8,7 +8,7 @@
   },
   "id": "polik.chaos-mod",
   "name": "Chaos Mod",
-  "version": "v1.0.1",
+  "version": "v1.0.2",
   "developer": "Polik",
   "links": {
     "source": "https://github.com/PolikVirus/Chaos-Mod-GD"
@@ -69,7 +69,6 @@
         "shake-screen",
         "high-pitch",
         "low-pitch",
-        "drunk-mode",
         "snow-screen",
         "fps-20"
       ],
