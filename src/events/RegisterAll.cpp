@@ -17,6 +17,7 @@ namespace chaosmod {
     void registerPauseGame(EventRegistry&);
 
     void registerSoggyJumpscare(EventRegistry&);
+    void registerDoggieJumpscare(EventRegistry&);
 
     void registerInvertColors(EventRegistry&);
     void registerShakeScreen(EventRegistry&);
@@ -45,6 +46,7 @@ namespace chaosmod {
         registerPauseGame(reg);
 
         registerSoggyJumpscare(reg);
+        registerDoggieJumpscare(reg);
 
         registerInvertColors(reg);
         registerShakeScreen(reg);

@@ -21,7 +21,8 @@
   "description": "Random stuff happens every so often",
   "resources": {
     "files": [
-      "resources/Soggy.jpg"
+      "resources/Soggy.jpg",
+      "resources/doggie.png"
     ]
   },
   "settings": {
@@ -66,6 +67,7 @@
         "jump-delay",
         "pause-game",
         "soggy-jumpscare",
+        "doggie-jumpscare",
         "invert-colors",
         "shake-screen",
         "high-pitch",

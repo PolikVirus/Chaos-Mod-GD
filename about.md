@@ -24,6 +24,7 @@ Chaos Mod GD v1.0.2 currently has these events:
  * size mini
  * jump delay
  * soggy jumpscare
+ * doggie jumpscare
  * invert colors
  * shake screen
  * high pitch

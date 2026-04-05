@@ -1,5 +1,7 @@
 # v1.0.2
  * Removed Drunk mode
+ * Added Pause game
+ * Added doggie jumpscare
 
 # v1.0.1
 Fixed bugs
