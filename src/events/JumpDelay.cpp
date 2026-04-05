@@ -32,25 +32,6 @@ struct DelayState {
     PlayLayer* owner = nullptr;
 } static gJumpDelay;
 
-static PlayLayer* findPL(cocos2d::CCNode* node) {
-    if (!node) return nullptr;
-    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
-
-    auto children = node->getChildren();
-    if (!children) return nullptr;
-
-    for (auto obj : CCArrayExt(children)) {
-        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPL(child)) return pl;
-        }
-    }
-    return nullptr;
-}
-
-static PlayLayer* curPL() {
-    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
-}
-
 static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
@@ -84,7 +65,7 @@ public:
     void start(PlayLayer* pl, float delaySeconds, float duration) {
         m_delay = delaySeconds;
         m_timeRemaining = duration;
-        bindToPlayLayer(pl ? pl : curPL(), false);
+        bindToPlayLayer(pl ? pl : PlayLayer::get(), false);
         scheduleUpdate();
     }
 
@@ -114,7 +95,7 @@ public:
     }
 
     void stopAndDelete() {
-        auto current = curPL();
+        auto current = PlayLayer::get();
         if (current && current == m_playLayer) {
             flushQueue();
         } else {
@@ -126,7 +107,7 @@ public:
     }
 
     void update(float dt) override {
-        auto current = curPL();
+        auto current = PlayLayer::get();
         if (current && current != m_playLayer) {
             bindToPlayLayer(current, true);
         }

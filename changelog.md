@@ -1,3 +1,6 @@
+# v1.0.3
+ * Some files rewrite
+
 # v1.0.2
  * Removed Drunk mode
  * Added Pause game

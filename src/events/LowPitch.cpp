@@ -12,25 +12,6 @@ static constexpr int pitchTag = 0x4c4f5750;
 static constexpr float pitchDown = 0.7f;
 static constexpr float basePitch = 1.0f;
 
-static PlayLayer* findPL(cocos2d::CCNode* node) {
-    if (!node) return nullptr;
-    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
-
-    auto children = node->getChildren();
-    if (!children) return nullptr;
-
-    for (auto obj : CCArrayExt(children)) {
-        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPL(child)) return pl;
-        }
-    }
-    return nullptr;
-}
-
-static PlayLayer* curPL() {
-    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
-}
-
 class PitchDownCtrl : public cocos2d::CCNode {
 public:
     PlayLayer* m_playLayer = nullptr;
@@ -52,7 +33,7 @@ public:
     }
 
     void start(PlayLayer* pl, float duration) {
-        m_playLayer = pl ? pl : curPL();
+        m_playLayer = pl ? pl : PlayLayer::get();
         m_timeRemaining = duration;
         m_isRestored = false;
         applyPitch(pitchDown);
@@ -65,7 +46,7 @@ public:
             return;
         }
 
-        if (auto current = curPL()) {
+        if (auto current = PlayLayer::get()) {
             m_playLayer = current;
         }
 

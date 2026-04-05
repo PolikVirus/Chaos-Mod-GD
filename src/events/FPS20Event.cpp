@@ -11,25 +11,6 @@ namespace chaosmod {
 static constexpr float dur = 30.f;
 static constexpr int fpsTag = 0x46503230;
 
-static PlayLayer* findPL(cocos2d::CCNode* node) {
-    if (!node) return nullptr;
-    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
-
-    auto children = node->getChildren();
-    if (!children) return nullptr;
-
-    for (auto obj : CCArrayExt(children)) {
-        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPL(child)) return pl;
-        }
-    }
-    return nullptr;
-}
-
-static PlayLayer* curPL() {
-    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
-}
-
 static bool sameish(double a, double b) {
     return std::fabs(a - b) <= 0.0001;
 }
@@ -57,7 +38,7 @@ public:
     }
 
     void start(PlayLayer* pl, float duration) {
-        m_playLayer = pl ? pl : curPL();
+        m_playLayer = pl ? pl : PlayLayer::get();
         m_timeLeft = duration;
         m_restored = false;
 
@@ -78,7 +59,7 @@ public:
             return;
         }
 
-        if (auto current = curPL()) {
+        if (auto current = PlayLayer::get()) {
             m_playLayer = current;
         }
 

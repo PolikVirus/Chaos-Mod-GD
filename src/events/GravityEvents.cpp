@@ -15,25 +15,6 @@ static constexpr float lowMul = 0.5f;
 static constexpr float highMul = 2.0f;
 static constexpr int gravTag = 0x47524156;
 
-static PlayLayer* findPL(cocos2d::CCNode* node) {
-    if (!node) return nullptr;
-    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
-
-    auto children = node->getChildren();
-    if (!children) return nullptr;
-
-    for (auto obj : CCArrayExt(children)) {
-        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPL(child)) return pl;
-        }
-    }
-    return nullptr;
-}
-
-static PlayLayer* curPL() {
-    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
-}
-
 static bool pausedNow(PlayLayer* pl) {
     return pl && !pl->isGameplayActive();
 }
@@ -107,7 +88,7 @@ public:
 
     void start(PlayLayer* pl, float mul, float seconds) {
         bool playLayerChanged = pl && pl != m_playLayer;
-        bindToPlayLayer(pl ? pl : curPL(), playLayerChanged || !m_initialized);
+        bindToPlayLayer(pl ? pl : PlayLayer::get(), playLayerChanged || !m_initialized);
         m_multiplier = mul;
         m_timeRemaining = seconds;
         m_finished = false;
@@ -162,7 +143,7 @@ public:
     }
 
     void update(float dt) override {
-        auto current = curPL();
+        auto current = PlayLayer::get();
         if (current && current != m_playLayer) {
             bindToPlayLayer(current, true);
         }

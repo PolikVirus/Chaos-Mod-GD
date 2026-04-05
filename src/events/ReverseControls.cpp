@@ -21,25 +21,6 @@ struct RevState {
 };
 static RevState gRev;
 
-static PlayLayer* findPL(cocos2d::CCNode* node) {
-    if (!node) return nullptr;
-    if (auto pl = typeinfo_cast<PlayLayer*>(node)) return pl;
-
-    auto children = node->getChildren();
-    if (!children) return nullptr;
-
-    for (auto obj : CCArrayExt(children)) {
-        if (auto child = typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto pl = findPL(child)) return pl;
-        }
-    }
-    return nullptr;
-}
-
-static PlayLayer* curPL() {
-    return findPL(cocos2d::CCDirector::sharedDirector()->getRunningScene());
-}
-
 static bool isJumpHeld(PlayerObject* p) {
     if (!p) return false;
     auto key = static_cast<int>(PlayerButton::Jump);
@@ -208,13 +189,13 @@ public:
     void start(PlayLayer* pl, float duration) {
         m_stopped = false;
         m_timeRemaining = duration;
-        bindToPlayLayer(pl ? pl : curPL());
+        bindToPlayLayer(pl ? pl : PlayLayer::get());
         syncRev(m_playLayer);
         scheduleUpdate();
     }
 
     void update(float dt) override {
-        auto current = curPL();
+        auto current = PlayLayer::get();
         if (current) {
             bindToPlayLayer(current);
         }
@@ -240,7 +221,7 @@ public:
         if (m_stopped) return;
         m_stopped = true;
 
-        auto current = curPL();
+        auto current = PlayLayer::get();
         if (current && m_playLayer == current && gRev.owner == m_playLayer) {
             setActive(m_playLayer, false);
         } else {
