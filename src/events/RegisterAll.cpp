@@ -14,6 +14,8 @@ namespace chaosmod {
 
     void registerJumpDelay(EventRegistry&);
 
+    void registerPauseGame(EventRegistry&);
+
     void registerSoggyJumpscare(EventRegistry&);
 
     void registerInvertColors(EventRegistry&);
@@ -40,6 +42,8 @@ namespace chaosmod {
 
         registerJumpDelay(reg);
 
+        registerPauseGame(reg);
+
         registerSoggyJumpscare(reg);
 
         registerInvertColors(reg);
@@ -47,7 +51,6 @@ namespace chaosmod {
 
         registerHighPitch(reg);
         registerLowPitch(reg);
-
 
         registerSnowEvent(reg);
 

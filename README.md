@@ -29,6 +29,7 @@ Chaos Mod GD v1.0.2 currently has these events:
  * shake screen
  * high pitch
  * low pitch
+ * pause game
  * snow screen
  * fps 20
 
