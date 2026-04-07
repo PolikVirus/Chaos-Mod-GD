@@ -20,7 +20,6 @@ namespace chaosmod {
     void registerDoggieJumpscare(EventRegistry&);
 
     void registerInvertColors(EventRegistry&);
-    void registerShakeScreen(EventRegistry&);
 
     void registerHighPitch(EventRegistry&);
     void registerLowPitch(EventRegistry&);
@@ -49,7 +48,6 @@ namespace chaosmod {
         registerDoggieJumpscare(reg);
 
         registerInvertColors(reg);
-        registerShakeScreen(reg);
 
         registerHighPitch(reg);
         registerLowPitch(reg);
