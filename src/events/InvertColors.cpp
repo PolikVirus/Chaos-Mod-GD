@@ -59,7 +59,7 @@ public:
             m_overlayLayer->setAnchorPoint({0.f,0.f});
             m_overlayLayer->setPosition({0.f,0.f});
             m_overlayLayer->setBlendFunc(ccBlendFunc{GL_ONE_MINUS_DST_COLOR, GL_ZERO});
-            sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
+            sc->addChild(m_overlayLayer);
         }
         auto ws = cocos2d::CCDirector::sharedDirector()->getWinSize();
         m_overlayLayer->setContentSize(ws);
@@ -67,14 +67,14 @@ public:
             if (m_overlayLayer->getParent()) {
                 m_overlayLayer->removeFromParentAndCleanup(false);
             }
-            sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
+            sc->addChild(m_overlayLayer);
         }
         m_overlayLayer->setZOrder(std::numeric_limits<int>::max());
         auto children = sc->getChildren();
         if (children && children->count() > 0) {
             if (children->lastObject() != m_overlayLayer) {
                 m_overlayLayer->removeFromParentAndCleanup(false);
-                sc->addChild(m_overlayLayer, std::numeric_limits<int>::max());
+                sc->addChild(m_overlayLayer);
             }
         }
     }
@@ -146,7 +146,7 @@ static void applyInvert(PlayLayer* pl, float duration) {
     auto ctrl = InvertCtrl::create(pl);
     if (!ctrl) return;
     ctrl->setTag(invertTag);
-    sc->addChild(ctrl, std::numeric_limits<int>::max());
+    sc->addChild(ctrl);
     ctrl->start(duration);
 }
 

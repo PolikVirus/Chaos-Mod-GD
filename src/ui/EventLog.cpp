@@ -22,7 +22,7 @@ void EventLog::init(cocos2d::CCNode* parent) {
     if (m_root) m_root->removeFromParent();
 
     m_root = cocos2d::CCNode::create();
-    parent->addChild(m_root, 20001);
+    parent->addChild(m_root);
 
     m_lines.clear();
     m_slots.clear();

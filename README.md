@@ -15,7 +15,7 @@ If you find a bug, use the debug features to understand the bug in detail and re
 
 ## Events
 
-Chaos Mod GD v1.0.5 currently has these events:
+Chaos Mod GD v1.0.6 currently has these events:
  * speed x0.5
  * speed x1.5
  * speed x2
