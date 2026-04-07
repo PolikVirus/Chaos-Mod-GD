@@ -147,7 +147,7 @@ static void setSpeed(PlayLayer* pl, float factor, float duration) {
     if (!ctrl) return;
 
     ctrl->setTag(speedTag);
-    scene->addChild(ctrl, 999999);
+    scene->addChild(ctrl);
     ctrl->start(pl, factor, duration);
 }
 
