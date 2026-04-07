@@ -26,7 +26,6 @@ Chaos Mod GD v1.0.3 currently has these events:
  * soggy jumpscare
  * doggie jumpscare
  * invert colors
- * shake screen
  * high pitch
  * low pitch
  * pause game

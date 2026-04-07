@@ -1,3 +1,5 @@
+# v1.0.4
+ * Removed shake screen event
 # v1.0.3
  * Some files rewrite
 
