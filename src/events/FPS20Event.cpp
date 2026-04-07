@@ -119,7 +119,7 @@ static void run20Fps(PlayLayer* pl) {
     auto ctrl = FpsCtrl::create(pl);
     if (!ctrl) return;
     ctrl->setTag(fpsTag);
-    scene->addChild(ctrl, 999999);
+    scene->addChild(ctrl);
     ctrl->start(pl, dur);
 }
 

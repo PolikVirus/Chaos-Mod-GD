@@ -186,7 +186,7 @@ static void runDelay(PlayLayer* pl, float delaySeconds, float duration) {
         ctrl = DelayCtrl::create(pl);
         if (!ctrl) return;
         ctrl->setTag(delayTag);
-        scene->addChild(ctrl, 999999);
+        scene->addChild(ctrl);
     }
 
     ctrl->start(pl, delaySeconds, duration);

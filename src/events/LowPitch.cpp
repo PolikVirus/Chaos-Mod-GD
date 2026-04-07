@@ -95,7 +95,7 @@ static void doLowPitch(PlayLayer* pl, float duration) {
     auto ctrl = PitchDownCtrl::create(pl);
     if (!ctrl) return;
     ctrl->setTag(pitchTag);
-    sc->addChild(ctrl, 999999);
+    sc->addChild(ctrl);
     ctrl->start(pl, duration);
 }
 

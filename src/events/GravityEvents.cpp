@@ -199,7 +199,7 @@ static void doGravity(PlayLayer* pl, float mul, float seconds) {
     auto node = GravThing::create(pl);
     if (!node) return;
     node->setTag(gravTag);
-    scene->addChild(node, 999999);
+    scene->addChild(node);
     node->start(pl, mul, seconds);
 }
 

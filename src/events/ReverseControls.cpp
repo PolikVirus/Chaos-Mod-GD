@@ -261,7 +261,7 @@ void registerReverseControls(EventRegistry& reg) {
             auto ctrl = RevCtrl::create(pl);
             if (!ctrl) return;
             ctrl->setTag(revTag);
-            scene->addChild(ctrl, 999999);
+            scene->addChild(ctrl);
             ctrl->start(pl, dur);
         }
     ));
