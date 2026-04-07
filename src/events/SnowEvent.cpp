@@ -90,7 +90,7 @@ public:
             m_snowParticles->setSpeed(80.f);
             m_snowParticles->setSpeedVar(30.f);
             m_snowParticles->setEmissionRate(m_originalEmissionRate);
-            currentScene->addChild(m_snowParticles, std::numeric_limits<int>::max());
+            currentScene->addChild(m_snowParticles);
         }
 
         scheduleUpdate();
@@ -156,7 +156,7 @@ static void runSnowEffect(PlayLayer* pl) {
     auto ctrl = SnowCtrl::create(pl);
     if (!ctrl) return;
     ctrl->setTag(snowTag);
-    scene->addChild(ctrl, std::numeric_limits<int>::max());
+    scene->addChild(ctrl);
     ctrl->start();
 }
 

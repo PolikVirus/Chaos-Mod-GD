@@ -1,3 +1,6 @@
+# v1.0.6
+ * Some stuff was deleted!
+
 # v1.0.5
  * Some files rewrite
 
